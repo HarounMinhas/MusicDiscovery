@@ -4,8 +4,8 @@ Minimal Vite + React shell that consumes the MusicDiscovery API. The search box 
 
 ## Scripts
 
-- `pnpm dev --filter=@musicdiscovery/web` – start Vite on port 5173
-- `pnpm build --filter=@musicdiscovery/web` – type-check and build the production bundle
+- `npm run dev` – start Vite on port 5173
+- `npm run build` – type-check and build the production bundle
 
 ## Environment
 

@@ -4,8 +4,8 @@ Express server that exposes music discovery endpoints backed by pluggable provid
 
 ## Scripts
 
-- `pnpm dev --filter=@musicdiscovery/api` – start the API with `tsx`
-- `pnpm build --filter=@musicdiscovery/api` – compile TypeScript into `dist`
+- `npm run dev` – start the API with `tsx`
+- `npm run build` – compile TypeScript into `dist`
 
 ## Environment
 

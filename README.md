@@ -26,7 +26,7 @@ The backend supports three music providers out of the box: `tokenless` (Deezer +
 Follow these steps on a fresh machine:
 
 1. **Install prerequisites**
-   - [Node.js 20+](https://nodejs.org/) (includes [Corepack](https://nodejs.org/api/corepack.html) for pnpm)
+   - [Node.js 20+](https://nodejs.org/) (includes npm)
    - Optional: [Docker Desktop](https://www.docker.com/) if you plan to run Redis/PostgreSQL later in the roadmap
 
 2. **Clone the repository and install dependencies**
@@ -34,8 +34,7 @@ Follow these steps on a fresh machine:
    ```bash
    git clone https://github.com/<your-org>/MusicDiscovery.git
    cd MusicDiscovery
-   corepack enable pnpm
-   pnpm install
+   npm install
    ```
 
 3. **Configure environment variables**
@@ -52,7 +51,7 @@ Follow these steps on a fresh machine:
    - Run both the API and the web shell in parallel with Turbo:
 
      ```bash
-     pnpm dev
+     npm run dev
      ```
 
    - The API boots on [http://localhost:8080/api](http://localhost:8080/api) and the web client on [http://localhost:5173](http://localhost:5173).
@@ -61,8 +60,8 @@ Follow these steps on a fresh machine:
    - Use the provider switcher in the top-right corner of the web UI to swap between Spotify, the tokenless blend, or iTunes-only data. The choice is persisted locally and forwarded to every API request.
 
 6. **Run individual workspaces (optional)**
-   - API only: `pnpm dev --filter=@musicdiscovery/api`
-   - Web only: `pnpm dev --filter=@musicdiscovery/web`
+   - API only: `npm run dev -- --filter=@musicdiscovery/api`
+   - Web only: `npm run dev -- --filter=@musicdiscovery/web`
 
 With these steps you can search for artists immediately using the tokenless mode without any secrets.
 

@@ -22,8 +22,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-      - run: corepack enable pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build --filter=@musicdiscovery/api
+          cache: npm
+      - run: npm install
+      - run: npm run build -- --filter=@musicdiscovery/api
