@@ -5,7 +5,10 @@
     "apps/*",
     "packages/*"
   ],
+  "packageManager": "pnpm@9.12.0",
+  "engines": {"node": ">=20 <21"},
   "scripts": {
+    "preinstall": "npx -y only-allow pnpm",
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",

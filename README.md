@@ -25,6 +25,14 @@ The backend supports three music providers out of the box: `tokenless` (Deezer +
 
 Follow these steps on a fresh machine:
 
+   # one-time per machine (works on Windows PowerShell too)
+   corepack enable
+   # after cloning the repo:
+   pnpm --version              # Corepack fetches the pinned pnpm automatically
+   pnpm install
+   pnpm dev
+
+
 1. **Install prerequisites**
    - [Node.js 20+](https://nodejs.org/) (includes npm)
    - Optional: [Docker Desktop](https://www.docker.com/) if you plan to run Redis/PostgreSQL later in the roadmap

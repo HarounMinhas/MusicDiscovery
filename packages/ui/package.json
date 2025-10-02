@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.tsx",
   "scripts": {
-    "build": "echo 'design system build pending'"
+    "build": "node -e \"require('fs').mkdirSync('dist',{recursive:true}); require('fs').writeFileSync('dist/.placeholder','ui build pending');\""
   },
   "devDependencies": {
     "typescript": "^5.4.5"

@@ -1,14 +1,29 @@
-node_modules
-.dist
-build
-dist
+# Node / builds
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Turbo / pnpm
+.turbo/
+.pnpm-store/
+pnpm-debug.log*
+npm-debug.log*
+
+# Env
 .env
 .env.local
-pnpm-lock.yaml
-package-lock.json
-yarn.lock
+apps/*/.env
+packages/*/.env
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.vs/
+*.user
+*.suo
+
+# OS
 .DS_Store
-.idea
-.vscode
-coverage
-artifacts
+Thumbs.db
