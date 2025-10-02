@@ -1,0 +1,14 @@
+node_modules
+.dist
+build
+dist
+.env
+.env.local
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+.DS_Store
+.idea
+.vscode
+coverage
+artifacts

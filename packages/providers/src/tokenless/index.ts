@@ -1,0 +1,162 @@
+import type { Artist, MusicProvider, Track } from '../types.js';
+
+const ITUNES_SEARCH_URL = 'https://itunes.apple.com/search';
+const DEEZER_API_URL = 'https://api.deezer.com';
+
+function withPrefix(provider: 'deezer' | 'itunes:artist' | 'itunes:track', id: string) {
+  return `${provider}:${id}`;
+}
+
+async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(input, init);
+  if (!res.ok) throw new Error(`TokenlessProvider request failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+export class TokenlessProvider implements MusicProvider {
+  async searchArtists(query: string, limit: number): Promise<Artist[]> {
+    if (!query.trim()) return [];
+
+    // Prefer Deezer search for richer metadata
+    const deezer = await fetchJson<{ data: any[] }>(`${DEEZER_API_URL}/search/artist?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const deezerArtists: Artist[] = deezer.data.slice(0, limit).map((artist) => ({
+      id: withPrefix('deezer', String(artist.id)),
+      name: artist.name,
+      imageUrl: artist.picture_xl || artist.picture_big || undefined,
+      genres: [],
+      popularity: artist.nb_fan ? Number(artist.nb_fan) : undefined
+    }));
+
+    if (deezerArtists.length >= limit) return deezerArtists;
+
+    const fallback = await fetchJson<{ results: any[] }>(`${ITUNES_SEARCH_URL}?term=${encodeURIComponent(query)}&entity=musicArtist&limit=${limit}`);
+    const itunesArtists = fallback.results.map((artist) => ({
+      id: withPrefix('itunes:artist', String(artist.artistId)),
+      name: artist.artistName,
+      imageUrl: artist.artworkUrl100 ? artist.artworkUrl100.replace('100x100', '512x512') : undefined,
+      genres: artist.primaryGenreName ? [artist.primaryGenreName] : undefined
+    }));
+
+    return [...deezerArtists, ...itunesArtists].slice(0, limit);
+  }
+
+  async getArtist(artistId: string): Promise<Artist | null> {
+    if (artistId.startsWith('deezer:')) {
+      const id = artistId.replace('deezer:', '');
+      const data = await fetchJson<any>(`${DEEZER_API_URL}/artist/${id}`);
+      return {
+        id: withPrefix('deezer', String(data.id)),
+        name: data.name,
+        imageUrl: data.picture_xl || data.picture_big || undefined,
+        genres: data.genres?.data?.map((g: any) => g.name) ?? undefined,
+        popularity: data.nb_fan ? Number(data.nb_fan) : undefined
+      };
+    }
+
+    if (artistId.startsWith('itunes:artist:')) {
+      const id = artistId.replace('itunes:artist:', '');
+      const data = await fetchJson<{ results: any[] }>(`${ITUNES_SEARCH_URL}?term=${id}&entity=musicArtist&limit=1`);
+      const artist = data.results[0];
+      if (!artist) return null;
+      return {
+        id: withPrefix('itunes:artist', String(artist.artistId)),
+        name: artist.artistName,
+        imageUrl: artist.artworkUrl100 ? artist.artworkUrl100.replace('100x100', '512x512') : undefined,
+        genres: artist.primaryGenreName ? [artist.primaryGenreName] : undefined
+      };
+    }
+
+    return null;
+  }
+
+  async getRelatedArtists(artistId: string, limit: number): Promise<Artist[]> {
+    if (!artistId.startsWith('deezer:')) {
+      // We only have related artists via Deezer. Fallback by searching the artist name to resolve a Deezer id.
+      const artist = await this.getArtist(artistId);
+      if (!artist) return [];
+      const matches = await this.searchArtists(artist.name, 1);
+      const deezerId = matches.find((a) => a.id.startsWith('deezer:'))?.id;
+      if (!deezerId) return [];
+      artistId = deezerId;
+    }
+
+    const id = artistId.replace('deezer:', '');
+    const data = await fetchJson<{ data: any[] }>(`${DEEZER_API_URL}/artist/${id}/related?limit=${limit}`);
+    return data.data.slice(0, limit).map((artist) => ({
+      id: withPrefix('deezer', String(artist.id)),
+      name: artist.name,
+      imageUrl: artist.picture_xl || artist.picture_big || undefined,
+      genres: [],
+      popularity: artist.nb_fan ? Number(artist.nb_fan) : undefined
+    }));
+  }
+
+  async getTopTracks(artistId: string, _market: string, limit: number): Promise<Track[]> {
+    if (!artistId.startsWith('deezer:')) {
+      const artist = await this.getArtist(artistId);
+      if (!artist) return [];
+      const matches = await this.searchArtists(artist.name, 1);
+      const deezerId = matches.find((a) => a.id.startsWith('deezer:'))?.id;
+      if (deezerId) artistId = deezerId;
+      else return this.lookupItunesTopTracks(artist.name, limit);
+    }
+
+    const id = artistId.replace('deezer:', '');
+    const data = await fetchJson<{ data: any[] }>(`${DEEZER_API_URL}/artist/${id}/top?limit=${limit}`);
+    const tracks = data.data.map((track) => ({
+      id: withPrefix('deezer', String(track.id)),
+      name: track.title,
+      previewUrl: track.preview || undefined,
+      durationMs: Number(track.duration) * 1000,
+      artists: track.contributors?.map((c: any) => ({ id: withPrefix('deezer', String(c.id)), name: c.name })) ?? []
+    }));
+
+    if (tracks.length === 0) {
+      const artist = await this.getArtist(artistId);
+      return artist ? this.lookupItunesTopTracks(artist.name, limit) : [];
+    }
+
+    return tracks;
+  }
+
+  async getTrack(trackId: string): Promise<Track | null> {
+    if (trackId.startsWith('deezer:')) {
+      const id = trackId.replace('deezer:', '');
+      const data = await fetchJson<any>(`${DEEZER_API_URL}/track/${id}`);
+      return {
+        id: withPrefix('deezer', String(data.id)),
+        name: data.title,
+        previewUrl: data.preview || undefined,
+        durationMs: Number(data.duration) * 1000,
+        artists: data.contributors?.map((c: any) => ({ id: withPrefix('deezer', String(c.id)), name: c.name })) ?? []
+      };
+    }
+
+    if (trackId.startsWith('itunes:track:')) {
+      const id = trackId.replace('itunes:track:', '');
+      const data = await fetchJson<{ results: any[] }>(`https://itunes.apple.com/lookup?id=${id}`);
+      const track = data.results[0];
+      if (!track) return null;
+      return {
+        id: withPrefix('itunes:track', String(track.trackId)),
+        name: track.trackName,
+        previewUrl: track.previewUrl || undefined,
+        durationMs: Number(track.trackTimeMillis),
+        artists: [{ id: withPrefix('itunes:artist', String(track.artistId)), name: track.artistName }]
+      };
+    }
+
+    return null;
+  }
+
+  private async lookupItunesTopTracks(name: string, limit: number): Promise<Track[]> {
+    const data = await fetchJson<{ results: any[] }>(`${ITUNES_SEARCH_URL}?term=${encodeURIComponent(name)}&entity=song&limit=${limit}`);
+    return data.results.slice(0, limit).map((track) => ({
+      id: withPrefix('itunes:track', String(track.trackId)),
+      name: track.trackName,
+      previewUrl: track.previewUrl || undefined,
+      durationMs: Number(track.trackTimeMillis),
+      artists: [{ id: withPrefix('itunes:artist', String(track.artistId)), name: track.artistName }]
+    }));
+  }
+}
