@@ -1,0 +1,27 @@
+name: API CI
+
+on:
+  push:
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'package.json'
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'turbo.json'
+      - 'package.json'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm run build -- --filter=@musicdiscovery/api
