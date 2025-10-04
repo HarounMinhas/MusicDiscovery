@@ -11,6 +11,7 @@ interface ArtistDetailsProps {
   error: string | null;
   provider: ProviderId;
   onPreviewError?: (message: string) => void;
+  onOpenRelated?: (artist: Artist) => void;
 }
 
 export default function ArtistDetails({
@@ -20,7 +21,8 @@ export default function ArtistDetails({
   relatedArtists,
   error,
   provider,
-  onPreviewError
+  onPreviewError,
+  onOpenRelated
 }: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
   const { activeTrackId, error: previewError, failure: previewFailure, togglePreview, stopPlayback } = useTrackPreview(
@@ -170,7 +172,22 @@ export default function ArtistDetails({
             ) : (
               <ul className="related-list">
                 {displayRelated.map((item) => (
-                  <li key={item.id}>{item.name}</li>
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className="related-list__button"
+                      onClick={() => onOpenRelated?.(item)}
+                    >
+                      {item.imageUrl ? (
+                        <img className="related-list__thumb" src={item.imageUrl} alt="" />
+                      ) : (
+                        <div className="related-list__thumb related-list__thumb--placeholder" aria-hidden="true">
+                          {item.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="related-list__label">{item.name}</span>
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}
