@@ -186,12 +186,8 @@ export function useTrackPreview(
     return result;
   }, []);
 
-  const startPlayback = useCallback(
+  const playPreparedTrack = useCallback(
     async (track: Track, allowRefresh: boolean, token: number) => {
-      if (!isEnabled) {
-        return;
-      }
-
       if (!track.previewUrl) {
         const details: PreviewFailureDetails = { reason: 'missing' };
         const message = buildErrorMessage(track, details);
@@ -234,8 +230,13 @@ export function useTrackPreview(
         if (allowRefresh) {
           try {
             const refreshed = await getTrack(track.id);
-            if (refreshed.previewUrl) {
-              await startPlayback(refreshed, false, token);
+            const merged = {
+              ...track,
+              ...refreshed,
+              previewUrl: refreshed.previewUrl ?? track.previewUrl
+            };
+            if (merged.previewUrl) {
+              await playPreparedTrack(merged, false, token);
               return;
             }
           } catch (refreshError) {
@@ -274,7 +275,34 @@ export function useTrackPreview(
         await handleFailure();
       }
     },
-    [buildErrorMessage, detachHandlers, ensureAudio, isEnabled, stop, validatePreview]
+    [buildErrorMessage, detachHandlers, ensureAudio, stop, validatePreview]
+  );
+
+  const startPlayback = useCallback(
+    async (track: Track, allowRefresh: boolean, token: number) => {
+      if (!isEnabled) {
+        return;
+      }
+
+      let preparedTrack = track;
+      try {
+        const refreshed = await getTrack(track.id);
+        preparedTrack = {
+          ...track,
+          ...refreshed,
+          previewUrl: refreshed.previewUrl ?? track.previewUrl
+        };
+      } catch (fetchError) {
+        console.warn('Kon trackgegevens niet ophalen voor preview', fetchError);
+      }
+
+      if (playbackTokenRef.current !== token) {
+        return;
+      }
+
+      await playPreparedTrack(preparedTrack, allowRefresh, token);
+    },
+    [isEnabled, playPreparedTrack]
   );
 
   const togglePreview = useCallback(
