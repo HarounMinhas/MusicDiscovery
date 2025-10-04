@@ -1,104 +1,32 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import type { Artist, Track } from '@musicdiscovery/shared';
-import { getRelatedArtists, getTopTracks, searchArtists } from './api';
+import React, { useState } from 'react';
 import ProviderSwitcher from './components/ProviderSwitcher';
 import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
 import ArtistDetails from './components/ArtistDetails';
 import './styles.css';
 import { getSelectedProvider } from './providerSelection';
-
-type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
-type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
+import { useArtistSearch } from './hooks/useArtistSearch';
+import { useArtistDetails } from './hooks/useArtistDetails';
 
 export default function App(): JSX.Element {
-  const [query, setQuery] = useState('');
-  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [results, setResults] = useState<Artist[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [provider] = useState(() => getSelectedProvider());
+  const {
+    query,
+    results,
+    status: searchStatus,
+    error: searchError,
+    selectedId,
+    selectedArtist,
+    isPopoverVisible,
+    updateQuery,
+    focusResults,
+    confirmSelection,
+    selectArtist
+  } = useArtistSearch();
 
-  const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle');
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [topTracks, setTopTracks] = useState<Track[]>([]);
-  const [relatedArtists, setRelatedArtists] = useState<Artist[]>([]);
-
-  const selectedArtist = useMemo(
-    () => (selectedId ? results.find((item) => item.id === selectedId) ?? null : null),
-    [results, selectedId]
+  const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
+    selectedArtist?.id ?? null
   );
-
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setSearchStatus('idle');
-      setSearchError(null);
-      setSelectedId(null);
-      return;
-    }
-
-    let cancelled = false;
-    setSearchStatus('loading');
-    setSearchError(null);
-
-    const debounce = window.setTimeout(() => {
-      searchArtists(query.trim(), 10)
-        .then((items) => {
-          if (cancelled) return;
-          setResults(items);
-          setSearchStatus('success');
-          if (items.length === 0) {
-            setSelectedId(null);
-          } else if (!items.some((item) => item.id === selectedId)) {
-            setSelectedId(items[0]?.id ?? null);
-          }
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          setSearchStatus('error');
-          setSearchError(err instanceof Error ? err.message : String(err));
-          setResults([]);
-        });
-    }, 350);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(debounce);
-    };
-  }, [query, selectedId]);
-
-  useEffect(() => {
-    if (!selectedArtist) {
-      setDetailStatus('idle');
-      setDetailError(null);
-      setTopTracks([]);
-      setRelatedArtists([]);
-      return;
-    }
-
-    let cancelled = false;
-    setDetailStatus('loading');
-    setDetailError(null);
-
-    Promise.all([getTopTracks(selectedArtist.id, undefined, 5), getRelatedArtists(selectedArtist.id, 8)])
-      .then(([tracks, related]) => {
-        if (cancelled) return;
-        setTopTracks(tracks);
-        setRelatedArtists(related);
-        setDetailStatus('success');
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setDetailStatus('error');
-        setDetailError(err instanceof Error ? err.message : String(err));
-        setTopTracks([]);
-        setRelatedArtists([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedArtist?.id]);
 
   return (
     <div className="app">
@@ -119,13 +47,32 @@ export default function App(): JSX.Element {
             <label htmlFor="artist-search" className="label">
               Zoek naar een artiest
             </label>
-            <input
-              id="artist-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Bijvoorbeeld: Stromae"
-              autoComplete="off"
-            />
+            <div className="search-panel__input-wrapper">
+              <input
+                id="artist-search"
+                value={query}
+                onChange={(event) => {
+                  updateQuery(event.target.value);
+                }}
+                onFocus={() => {
+                  focusResults();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    confirmSelection();
+                  }
+                }}
+                placeholder="Bijvoorbeeld: Stromae"
+                autoComplete="off"
+              />
+              <SearchResultsList
+                results={results}
+                selectedId={selectedId}
+                isVisible={isPopoverVisible}
+                onSelect={selectArtist}
+              />
+            </div>
           </div>
 
           {searchStatus === 'idle' && results.length === 0 ? (
@@ -139,11 +86,6 @@ export default function App(): JSX.Element {
             <p className="muted">Geen artiesten gevonden voor "{query}".</p>
           ) : null}
 
-          <SearchResultsList
-            results={results}
-            selectedId={selectedId}
-            onSelect={(artist) => setSelectedId(artist.id)}
-          />
         </section>
 
         <section className="details-panel">
@@ -154,6 +96,7 @@ export default function App(): JSX.Element {
               topTracks={topTracks}
               relatedArtists={relatedArtists}
               error={detailError}
+              provider={provider}
             />
           ) : (
             <div className="placeholder">

@@ -1,6 +1,7 @@
-import React from 'react';
-import type { Artist, Track } from '@musicdiscovery/shared';
+import React, { useEffect, useMemo } from 'react';
+import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
 import LoadingIndicator from './LoadingIndicator';
+import { useTrackPreview } from '../hooks/useTrackPreview';
 
 interface ArtistDetailsProps {
   artist: Artist;
@@ -8,9 +9,29 @@ interface ArtistDetailsProps {
   topTracks: Track[];
   relatedArtists: Artist[];
   error: string | null;
+  provider: ProviderId;
 }
 
-export default function ArtistDetails({ artist, status, topTracks, relatedArtists, error }: ArtistDetailsProps) {
+export default function ArtistDetails({ artist, status, topTracks, relatedArtists, error, provider }: ArtistDetailsProps) {
+  const previewEnabled = provider === 'tokenless';
+  const { activeTrackId, togglePreview, stopPlayback } = useTrackPreview(previewEnabled);
+
+  useEffect(() => {
+    stopPlayback();
+  }, [artist.id, provider, stopPlayback]);
+
+  useEffect(() => {
+    if (!activeTrackId) {
+      return;
+    }
+    if (!topTracks.some((track) => track.id === activeTrackId)) {
+      stopPlayback();
+    }
+  }, [activeTrackId, topTracks, stopPlayback]);
+
+  const displayTopTracks = useMemo(() => topTracks.slice(0, 5), [topTracks]);
+  const displayRelated = useMemo(() => relatedArtists.slice(0, 8), [relatedArtists]);
+
   return (
     <div className="artist-details">
       <header>
@@ -35,11 +56,49 @@ export default function ArtistDetails({ artist, status, topTracks, relatedArtist
         <div className="details-grid">
           <section>
             <h3>Topnummers</h3>
-            {topTracks.length === 0 ? (
+            {displayTopTracks.length === 0 ? (
               <p className="muted">Geen topnummers gevonden.</p>
+            ) : previewEnabled ? (
+              <ol className="track-list track-list--interactive">
+                {displayTopTracks.map((track) => {
+                  const isActive = activeTrackId === track.id;
+                  const canPreview = Boolean(track.previewUrl);
+                  return (
+                    <li key={track.id}>
+                      <button
+                        type="button"
+                        className={`track-list__button${isActive ? ' is-playing' : ''}`}
+                        onClick={() => togglePreview(track)}
+                        disabled={!canPreview}
+                        aria-pressed={isActive}
+                        aria-label={
+                          isActive
+                            ? `Stop preview van ${track.name}`
+                            : `Speel preview van ${track.name}`
+                        }
+                      >
+                        <div className="track-list__meta">
+                          <strong>{track.name}</strong>
+                          <span className="muted">{formatArtists(track)}</span>
+                        </div>
+                        <div className="track-list__actions">
+                          <span className="muted track-list__duration">
+                            {formatDuration(track.durationMs)}
+                          </span>
+                          {canPreview ? (
+                            <span className="track-list__icon" aria-hidden="true">
+                              {isActive ? '■' : '▶'}
+                            </span>
+                          ) : null}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
             ) : (
               <ol className="track-list">
-                {topTracks.slice(0, 5).map((track) => (
+                {displayTopTracks.map((track) => (
                   <li key={track.id}>
                     <div>
                       <strong>{track.name}</strong>
@@ -53,11 +112,11 @@ export default function ArtistDetails({ artist, status, topTracks, relatedArtist
           </section>
           <section>
             <h3>Gerelateerde artiesten</h3>
-            {relatedArtists.length === 0 ? (
+            {displayRelated.length === 0 ? (
               <p className="muted">Geen gerelateerde artiesten gevonden.</p>
             ) : (
               <ul className="related-list">
-                {relatedArtists.slice(0, 8).map((item) => (
+                {displayRelated.map((item) => (
                   <li key={item.id}>{item.name}</li>
                 ))}
               </ul>
