@@ -16,7 +16,7 @@ export default function App(): JSX.Element {
     status: searchStatus,
     error: searchError,
     selectedId,
-    selectedArtist,
+    confirmedArtist,
     isPopoverVisible,
     updateQuery,
     focusResults,
@@ -25,7 +25,7 @@ export default function App(): JSX.Element {
   } = useArtistSearch();
 
   const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
-    selectedArtist?.id ?? null
+    confirmedArtist?.id ?? null
   );
 
   return (
@@ -89,9 +89,9 @@ export default function App(): JSX.Element {
         </section>
 
         <section className="details-panel">
-          {selectedArtist ? (
+          {confirmedArtist ? (
             <ArtistDetails
-              artist={selectedArtist}
+              artist={confirmedArtist}
               status={detailStatus}
               topTracks={topTracks}
               relatedArtists={relatedArtists}

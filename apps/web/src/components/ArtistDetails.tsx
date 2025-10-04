@@ -14,7 +14,7 @@ interface ArtistDetailsProps {
 
 export default function ArtistDetails({ artist, status, topTracks, relatedArtists, error, provider }: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
-  const { activeTrackId, togglePreview, stopPlayback } = useTrackPreview(previewEnabled);
+  const { activeTrackId, error: previewError, togglePreview, stopPlayback } = useTrackPreview(previewEnabled);
 
   useEffect(() => {
     stopPlayback();
@@ -59,43 +59,46 @@ export default function ArtistDetails({ artist, status, topTracks, relatedArtist
             {displayTopTracks.length === 0 ? (
               <p className="muted">Geen topnummers gevonden.</p>
             ) : previewEnabled ? (
-              <ol className="track-list track-list--interactive">
-                {displayTopTracks.map((track) => {
-                  const isActive = activeTrackId === track.id;
-                  const canPreview = Boolean(track.previewUrl);
-                  return (
-                    <li key={track.id}>
-                      <button
-                        type="button"
-                        className={`track-list__button${isActive ? ' is-playing' : ''}`}
-                        onClick={() => togglePreview(track)}
-                        disabled={!canPreview}
-                        aria-pressed={isActive}
-                        aria-label={
-                          isActive
-                            ? `Stop preview van ${track.name}`
-                            : `Speel preview van ${track.name}`
-                        }
-                      >
-                        <div className="track-list__meta">
-                          <strong>{track.name}</strong>
-                          <span className="muted">{formatArtists(track)}</span>
-                        </div>
-                        <div className="track-list__actions">
-                          <span className="muted track-list__duration">
-                            {formatDuration(track.durationMs)}
-                          </span>
-                          {canPreview ? (
-                            <span className="track-list__icon" aria-hidden="true">
-                              {isActive ? '■' : '▶'}
+              <>
+                <ol className="track-list track-list--interactive">
+                  {displayTopTracks.map((track) => {
+                    const isActive = activeTrackId === track.id;
+                    const canPreview = Boolean(track.previewUrl);
+                    return (
+                      <li key={track.id}>
+                        <button
+                          type="button"
+                          className={`track-list__button${isActive ? ' is-playing' : ''}`}
+                          onClick={() => togglePreview(track)}
+                          disabled={!canPreview}
+                          aria-pressed={isActive}
+                          aria-label={
+                            isActive
+                              ? `Stop preview van ${track.name}`
+                              : `Speel preview van ${track.name}`
+                          }
+                        >
+                          <div className="track-list__meta">
+                            <strong>{track.name}</strong>
+                            <span className="muted">{formatArtists(track)}</span>
+                          </div>
+                          <div className="track-list__actions">
+                            <span className="muted track-list__duration">
+                              {formatDuration(track.durationMs)}
                             </span>
-                          ) : null}
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
+                            {canPreview ? (
+                              <span className="track-list__icon" aria-hidden="true">
+                                {isActive ? '■' : '▶'}
+                              </span>
+                            ) : null}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+                {previewError ? <p className="track-list__error">{previewError}</p> : null}
+              </>
             ) : (
               <ol className="track-list">
                 {displayTopTracks.map((track) => (

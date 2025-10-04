@@ -16,7 +16,8 @@ interface UseArtistSearchResult {
   status: AsyncStatus;
   error: string | null;
   selectedId: string | null;
-  selectedArtist: Artist | null;
+  highlightedArtist: Artist | null;
+  confirmedArtist: Artist | null;
   isPopoverVisible: boolean;
   updateQuery: (value: string) => void;
   focusResults: () => void;
@@ -31,6 +32,7 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmedArtist, setConfirmedArtist] = useState<Artist | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const manualHideRef = useRef(false);
@@ -113,20 +115,37 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
   }, [hasResults]);
 
   const confirmSelection = useCallback(() => {
+    const fallback = results[0] ?? null;
+    const targetId = selectedIdRef.current ?? fallback?.id ?? null;
+    if (!targetId) {
+      manualHideRef.current = false;
+      setIsPopoverOpen(false);
+      return;
+    }
+
+    const artist = results.find((item) => item.id === targetId) ?? fallback;
+    if (!artist) {
+      manualHideRef.current = false;
+      setIsPopoverOpen(false);
+      return;
+    }
+
     manualHideRef.current = true;
     setIsPopoverOpen(false);
-    if (!selectedIdRef.current && results[0]) {
-      setSelectedId(results[0].id);
-    }
+    setSelectedId(artist.id);
+    setConfirmedArtist(artist);
+    setQuery(artist.name);
   }, [results]);
 
   const selectArtist = useCallback((artist: Artist) => {
     setSelectedId(artist.id);
+    setConfirmedArtist(artist);
     manualHideRef.current = true;
     setIsPopoverOpen(false);
+    setQuery(artist.name);
   }, []);
 
-  const selectedArtist = useMemo(
+  const highlightedArtist = useMemo(
     () => (selectedId ? results.find((item) => item.id === selectedId) ?? null : null),
     [results, selectedId]
   );
@@ -137,7 +156,8 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
     status,
     error,
     selectedId,
-    selectedArtist,
+    highlightedArtist,
+    confirmedArtist,
     isPopoverVisible: isPopoverOpen && hasResults,
     updateQuery,
     focusResults,
@@ -145,3 +165,4 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
     selectArtist
   };
 }
+

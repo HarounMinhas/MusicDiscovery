@@ -83,6 +83,8 @@ a {
   flex-direction: column;
   gap: 1.25rem;
   backdrop-filter: blur(18px);
+  position: relative;
+  z-index: 2;
 }
 
 .search-panel__input input {
@@ -207,6 +209,8 @@ a {
   padding: 2rem;
   backdrop-filter: blur(18px);
   min-height: 420px;
+  position: relative;
+  z-index: 1;
 }
 
 .artist-details header {
@@ -352,6 +356,12 @@ a {
 .track-list__button.is-playing .track-list__icon {
   opacity: 1;
   transform: translateY(0);
+}
+
+.track-list__error {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: #ff9b9b;
 }
 
 .track-list__button.is-playing .track-list__icon {
