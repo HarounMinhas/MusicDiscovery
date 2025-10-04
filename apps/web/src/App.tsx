@@ -6,6 +6,10 @@ import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
 import ArtistDetails from './components/ArtistDetails';
 import './styles.css';
+import { getSelectedProvider } from './providerSelection';
+
+type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
+type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
 
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
