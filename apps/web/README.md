@@ -1,11 +1,11 @@
 # MusicDiscovery Web
 
-Minimal Vite + React shell that consumes the MusicDiscovery API. The search box demonstrates the pluggable provider system by calling `/api/spotify/search` with a `provider` override so you can switch between Spotify, the tokenless blend, or pure iTunes data.
+Minimal Vite + React shell that consumes the MusicDiscovery API. The search box demonstrates the pluggable provider system by calling the generic `/api/music/search` endpoint with a `provider` override so you can switch between Spotify, the tokenless blend (Deezer + iTunes), or pure iTunes data.
 
 ## Scripts
 
-- `npm run dev` – start Vite on port 5173
-- `npm run build` – type-check and build the production bundle
+- `pnpm dev` – start Vite on port 5173
+- `pnpm build` – type-check and build the production bundle
 
 ## Environment
 

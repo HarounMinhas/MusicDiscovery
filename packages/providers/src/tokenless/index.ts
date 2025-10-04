@@ -7,6 +7,21 @@ function withPrefix(provider: 'deezer' | 'itunes:artist' | 'itunes:track', id: s
   return `${provider}:${id}`;
 }
 
+function normalize(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function dedupeById(items: Artist[]): Artist[] {
+  const seen = new Set<string>();
+  const result: Artist[] = [];
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    result.push(item);
+  }
+  return result;
+}
+
 async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   const res = await fetch(input, init);
   if (!res.ok) throw new Error(`TokenlessProvider request failed: ${res.status}`);
@@ -70,25 +85,26 @@ export class TokenlessProvider implements MusicProvider {
   }
 
   async getRelatedArtists(artistId: string, limit: number): Promise<Artist[]> {
-    if (!artistId.startsWith('deezer:')) {
-      // We only have related artists via Deezer. Fallback by searching the artist name to resolve a Deezer id.
-      const artist = await this.getArtist(artistId);
-      if (!artist) return [];
-      const matches = await this.searchArtists(artist.name, 1);
-      const deezerId = matches.find((a) => a.id.startsWith('deezer:'))?.id;
-      if (!deezerId) return [];
-      artistId = deezerId;
+    const styleMatched: Artist[] = [];
+    const deezerId = await this.resolveDeezerArtistId(artistId);
+
+    if (deezerId) {
+      const deezerRelated = await this.lookupDeezerRelated(deezerId, limit);
+      styleMatched.push(...deezerRelated);
+      if (styleMatched.length >= limit) {
+        return styleMatched.slice(0, limit);
+      }
     }
 
-    const id = artistId.replace('deezer:', '');
-    const data = await fetchJson<{ data: any[] }>(`${DEEZER_API_URL}/artist/${id}/related?limit=${limit}`);
-    return data.data.slice(0, limit).map((artist) => ({
-      id: withPrefix('deezer', String(artist.id)),
-      name: artist.name,
-      imageUrl: artist.picture_xl || artist.picture_big || undefined,
-      genres: [],
-      popularity: artist.nb_fan ? Number(artist.nb_fan) : undefined
-    }));
+    const artist = await this.getArtist(artistId);
+    if (!artist || !artist.genres?.length) {
+      return dedupeById(styleMatched).slice(0, limit);
+    }
+
+    const genreMatches = await this.lookupItunesArtistsByGenres(artist, limit - styleMatched.length);
+    styleMatched.push(...genreMatches);
+
+    return dedupeById(styleMatched).slice(0, limit);
   }
 
   async getTopTracks(artistId: string, _market: string, limit: number): Promise<Track[]> {
@@ -158,5 +174,68 @@ export class TokenlessProvider implements MusicProvider {
       durationMs: Number(track.trackTimeMillis),
       artists: [{ id: withPrefix('itunes:artist', String(track.artistId)), name: track.artistName }]
     }));
+  }
+
+  private async resolveDeezerArtistId(artistId: string): Promise<string | null> {
+    if (artistId.startsWith('deezer:')) {
+      return artistId.replace('deezer:', '');
+    }
+
+    const artist = await this.getArtist(artistId);
+    if (!artist) return null;
+
+    const matches = await this.searchArtists(artist.name, 5);
+    const normalizedName = normalize(artist.name);
+    const deezer =
+      matches.find((candidate) => candidate.id.startsWith('deezer:') && normalize(candidate.name) === normalizedName) ??
+      matches.find((candidate) => candidate.id.startsWith('deezer:'));
+    return deezer ? deezer.id.replace('deezer:', '') : null;
+  }
+
+  private async lookupDeezerRelated(id: string, limit: number): Promise<Artist[]> {
+    const data = await fetchJson<{ data: any[] }>(`${DEEZER_API_URL}/artist/${id}/related?limit=${limit}`);
+    return data.data.slice(0, limit).map((artist) => ({
+      id: withPrefix('deezer', String(artist.id)),
+      name: artist.name,
+      imageUrl: artist.picture_xl || artist.picture_big || undefined,
+      genres: artist.genre_id ? [String(artist.genre_id)] : undefined,
+      popularity: artist.nb_fan ? Number(artist.nb_fan) : undefined
+    }));
+  }
+
+  private async lookupItunesArtistsByGenres(artist: Artist, limit: number): Promise<Artist[]> {
+    if (limit <= 0) return [];
+    const related: Artist[] = [];
+    const targetGenres = Array.from(new Set((artist.genres ?? []).map(normalize))).filter(Boolean);
+    const exclude = artist.id;
+    const excludedNames = new Set<string>([normalize(artist.name)]);
+
+    for (const genre of targetGenres) {
+      if (!genre) continue;
+      const data = await fetchJson<{ results: any[] }>(
+        `${ITUNES_SEARCH_URL}?term=${encodeURIComponent(genre)}&entity=musicArtist&limit=${Math.max(limit * 3, 25)}`
+      );
+
+      for (const item of data.results) {
+        const normalized = normalize(item.primaryGenreName ?? '');
+        if (!normalized || !targetGenres.includes(normalized)) continue;
+        const id = withPrefix('itunes:artist', String(item.artistId));
+        if (id === exclude) continue;
+        if (excludedNames.has(normalize(item.artistName))) continue;
+
+        related.push({
+          id,
+          name: item.artistName,
+          imageUrl: item.artworkUrl100 ? item.artworkUrl100.replace('100x100', '512x512') : undefined,
+          genres: item.primaryGenreName ? [item.primaryGenreName] : undefined
+        });
+
+        excludedNames.add(normalize(item.artistName));
+
+        if (related.length >= limit) return related;
+      }
+    }
+
+    return related;
   }
 }
