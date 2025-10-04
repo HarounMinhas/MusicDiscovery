@@ -27,7 +27,7 @@ router.get('/providers', (_req, res) => {
   });
 });
 
-router.get('/spotify/search', async (req, res, next) => {
+router.get('/music/search', async (req, res, next) => {
   try {
     const query = String(req.query.query ?? '').trim();
     const limit = parseLimit(req.query.limit);
@@ -36,7 +36,11 @@ router.get('/spotify/search', async (req, res, next) => {
       return;
     }
     const { mode, provider } = resolveProvider(req);
-    const items = await withCache(`search:${mode}:${query}:${limit}`, 1000 * 60 * 60 * 2, () => provider.searchArtists(query, limit));
+    const items = await withCache(
+      `search:${mode}:${query}:${limit}`,
+      1000 * 60 * 60 * 2,
+      () => provider.searchArtists(query, limit)
+    );
     const parsed = SearchArtistsResponseSchema.parse({ items });
     res.json(parsed);
   } catch (error) {
@@ -44,10 +48,14 @@ router.get('/spotify/search', async (req, res, next) => {
   }
 });
 
-router.get('/spotify/artists/:id', async (req, res, next) => {
+router.get('/music/artists/:id', async (req, res, next) => {
   try {
     const { mode, provider } = resolveProvider(req);
-    const artist = await withCache(`artist:${mode}:${req.params.id}`, 1000 * 60 * 60 * 24, () => provider.getArtist(req.params.id));
+    const artist = await withCache(
+      `artist:${mode}:${req.params.id}`,
+      1000 * 60 * 60 * 24,
+      () => provider.getArtist(req.params.id)
+    );
     if (!artist) {
       res.status(404).json({ error: { code: 'not_found', message: 'Artist not found' } });
       return;
@@ -58,7 +66,7 @@ router.get('/spotify/artists/:id', async (req, res, next) => {
   }
 });
 
-router.get('/spotify/artists/:id/related', async (req, res, next) => {
+router.get('/music/artists/:id/related', async (req, res, next) => {
   try {
     const limit = parseLimit(req.query.limit);
     const { mode, provider } = resolveProvider(req);
@@ -74,7 +82,7 @@ router.get('/spotify/artists/:id/related', async (req, res, next) => {
   }
 });
 
-router.get('/spotify/artists/:id/top-tracks', async (req, res, next) => {
+router.get('/music/artists/:id/top-tracks', async (req, res, next) => {
   try {
     const limit = parseLimit(req.query.limit);
     const market = String(req.query.market ?? env.MARKET).trim() || env.MARKET;
@@ -91,10 +99,14 @@ router.get('/spotify/artists/:id/top-tracks', async (req, res, next) => {
   }
 });
 
-router.get('/spotify/tracks/:id', async (req, res, next) => {
+router.get('/music/tracks/:id', async (req, res, next) => {
   try {
     const { mode, provider } = resolveProvider(req);
-    const track = await withCache(`track:${mode}:${req.params.id}`, 1000 * 60 * 60 * 24, () => provider.getTrack(req.params.id));
+    const track = await withCache(
+      `track:${mode}:${req.params.id}`,
+      1000 * 60 * 60 * 24,
+      () => provider.getTrack(req.params.id)
+    );
     if (!track) {
       res.status(404).json({ error: { code: 'not_found', message: 'Track not found' } });
       return;

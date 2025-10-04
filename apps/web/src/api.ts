@@ -22,18 +22,18 @@ export async function getProviderCatalog(): Promise<{ default: ProviderId; items
 }
 
 export async function searchArtists(query: string, limit = 10): Promise<Artist[]> {
-  const data = await request<{ items: Artist[] }>(`/spotify/search?query=${encodeURIComponent(query)}&limit=${limit}`);
+  const data = await request<{ items: Artist[] }>(`/music/search?query=${encodeURIComponent(query)}&limit=${limit}`);
   return data.items;
 }
 
 export async function getRelatedArtists(id: string, limit = 10): Promise<Artist[]> {
-  const data = await request<{ items: Artist[] }>(`/spotify/artists/${id}/related?limit=${limit}`);
+  const data = await request<{ items: Artist[] }>(`/music/artists/${id}/related?limit=${limit}`);
   return data.items;
 }
 
 export async function getTopTracks(id: string, market?: string, limit = 10): Promise<Track[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (market) params.set('market', market);
-  const data = await request<{ items: Track[] }>(`/spotify/artists/${id}/top-tracks?${params.toString()}`);
+  const data = await request<{ items: Track[] }>(`/music/artists/${id}/top-tracks?${params.toString()}`);
   return data.items;
 }

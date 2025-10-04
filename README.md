@@ -25,16 +25,17 @@ The backend supports three music providers out of the box: `tokenless` (Deezer +
 
 Follow these steps on a fresh machine:
 
-   # one-time per machine (works on Windows PowerShell too)
-   corepack enable
-   # after cloning the repo:
-   pnpm --version              # Corepack fetches the pinned pnpm automatically
-   pnpm install
-   pnpm dev
-
+```bash
+# one-time per machine (works on Windows PowerShell too)
+corepack enable
+# after cloning the repo:
+pnpm --version              # Corepack fetches the pinned pnpm automatically
+pnpm install
+pnpm dev
+```
 
 1. **Install prerequisites**
-   - [Node.js 20+](https://nodejs.org/) (includes npm)
+   - [Node.js 20](https://nodejs.org/) or newer (Corepack ships with Node 20+)
    - Optional: [Docker Desktop](https://www.docker.com/) if you plan to run Redis/PostgreSQL later in the roadmap
 
 2. **Clone the repository and install dependencies**
@@ -42,8 +43,12 @@ Follow these steps on a fresh machine:
    ```bash
    git clone https://github.com/<your-org>/MusicDiscovery.git
    cd MusicDiscovery
-   npm install
+   corepack enable                               # enables pnpm via Corepack
+   pnpm --version                                # downloads the pinned pnpm version
+   pnpm install                                  # installs workspace dependencies
    ```
+
+   > ℹ️ A `preinstall` hook blocks `npm install`, so make sure to use pnpm as shown above.
 
 3. **Configure environment variables**
    - Copy the provided examples and adjust as needed:
@@ -59,17 +64,23 @@ Follow these steps on a fresh machine:
    - Run both the API and the web shell in parallel with Turbo:
 
      ```bash
-     npm run dev
+     pnpm dev
      ```
 
    - The API boots on [http://localhost:8080/api](http://localhost:8080/api) and the web client on [http://localhost:5173](http://localhost:5173).
 
-5. **Select a provider at runtime**
-   - Use the provider switcher in the top-right corner of the web UI to swap between Spotify, the tokenless blend, or iTunes-only data. The choice is persisted locally and forwarded to every API request.
+5. **Verify the stack**
+   - Check the API health endpoint:
+
+     ```bash
+     curl http://localhost:8080/api/health
+     ```
+
+   - Open the web client at [http://localhost:5173](http://localhost:5173) and run an artist search. Use the provider switcher in the top-right corner to swap between Spotify, the tokenless blend, or iTunes-only data.
 
 6. **Run individual workspaces (optional)**
-   - API only: `npm run dev -- --filter=@musicdiscovery/api`
-   - Web only: `npm run dev -- --filter=@musicdiscovery/web`
+   - API only: `pnpm --filter @musicdiscovery/api dev`
+   - Web only: `pnpm --filter @musicdiscovery/web dev`
 
 With these steps you can search for artists immediately using the tokenless mode without any secrets.
 
