@@ -2,13 +2,30 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Track } from '@musicdiscovery/shared';
 import { getTrack } from '../api';
 
+type PreviewFailureReason = 'missing' | 'unsupported' | 'fetch-error';
+
+interface PreviewFailureDetails {
+  status?: number;
+  reason?: PreviewFailureReason;
+  mediaCode?: number | null;
+  deezerReference?: string | null;
+  deezerIp?: string | null;
+}
+
 type PreviewValidationResult =
   | { ok: true }
-  | { ok: false; status?: number; reason?: 'missing' | 'unsupported' | 'fetch-error' };
+  | { ok: false; details: PreviewFailureDetails };
+
+interface PreviewFailure {
+  track: Track;
+  details: PreviewFailureDetails;
+  timestamp: number;
+}
 
 interface UseTrackPreviewResult {
   activeTrackId: string | null;
   error: string | null;
+  failure: PreviewFailure | null;
   togglePreview: (track: Track) => void;
   stopPlayback: () => void;
 }
@@ -22,6 +39,7 @@ export function useTrackPreview(
   const errorHandlerRef = useRef<(() => void) | null>(null);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<PreviewFailure | null>(null);
   const notifyErrorRef = useRef<typeof onPlaybackError>();
   const playbackTokenRef = useRef(0);
 
@@ -67,13 +85,11 @@ export function useTrackPreview(
     return audioRef.current;
   }, []);
 
-  const buildErrorMessage = useCallback((track: Track, context: {
-    status?: number | null;
-    mediaCode?: number | null;
-    reason?: 'missing' | 'unsupported' | 'fetch-error';
-  }) => {
+  const buildErrorMessage = useCallback((track: Track, context: PreviewFailureDetails) => {
     if (context.status === 403) {
-      return `Preview voor "${track.name}" is niet beschikbaar in jouw regio (Deezer gaf status 403).`;
+      const reference = context.deezerReference ? ` Referentie: ${context.deezerReference}.` : '';
+      const clientIp = context.deezerIp ? ` CDN-IP: ${context.deezerIp}.` : '';
+      return `Preview voor "${track.name}" is door Deezer geblokkeerd (status 403 Forbidden). Dit gebeurt wanneer de sample wegens licentie- of regio-beperkingen niet publiek afgespeeld mag worden.${reference}${clientIp}`;
     }
     if (context.status && context.status >= 400) {
       return `Preview voor "${track.name}" kan niet worden geladen (status ${context.status}).`;
@@ -106,7 +122,7 @@ export function useTrackPreview(
   // in plaats van een generieke HTMLMediaElement-fout.
   const validatePreview = useCallback(async (track: Track): Promise<PreviewValidationResult> => {
     if (!track.previewUrl) {
-      return { ok: false, reason: 'missing' };
+      return { ok: false, details: { reason: 'missing' } };
     }
 
     const url = track.previewUrl;
@@ -125,27 +141,45 @@ export function useTrackPreview(
       try {
         const res = await fetch(url, options);
         if (!res.ok) {
-          return { ok: false, status: res.status };
+          const details: PreviewFailureDetails = { status: res.status };
+          const exposedHeaders = res.headers;
+          const deezerIp = exposedHeaders.get('x-deezer-client-ip');
+          if (deezerIp) {
+            details.deezerIp = deezerIp;
+          }
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('text')) {
+            try {
+              const bodyText = await res.text();
+              const match = bodyText.match(/Reference #([A-Za-z0-9.]+)/i);
+              if (match) {
+                details.deezerReference = match[1];
+              }
+            } catch (readError) {
+              console.warn('Kon Deezer-fouttekst niet lezen', readError);
+            }
+          }
+          return { ok: false, details };
         }
         const contentType = res.headers.get('content-type');
         if (contentType && !contentType.includes('audio')) {
           await res.body?.cancel().catch(() => {});
-          return { ok: false, reason: 'unsupported' };
+          return { ok: false, details: { reason: 'unsupported', status: res.status } };
         }
         await res.body?.cancel().catch(() => {});
         return { ok: true };
       } catch (error) {
-        return { ok: false, reason: 'fetch-error' };
+        return { ok: false, details: { reason: 'fetch-error' } };
       } finally {
         controller.abort();
       }
     };
 
     let result = await tryRequest('HEAD');
-    if (!result.ok && result.status !== undefined && [405, 501].includes(result.status)) {
+    if (!result.ok && result.details.status !== undefined && [405, 501].includes(result.details.status)) {
       result = await tryRequest('GET');
     }
-    if (!result.ok && result.status === undefined) {
+    if (!result.ok && result.details.status === undefined) {
       result = await tryRequest('GET');
     }
 
@@ -159,8 +193,10 @@ export function useTrackPreview(
       }
 
       if (!track.previewUrl) {
-        const message = buildErrorMessage(track, { reason: 'missing' });
+        const details: PreviewFailureDetails = { reason: 'missing' };
+        const message = buildErrorMessage(track, details);
         setError(message);
+        setFailure({ track, details, timestamp: Date.now() });
         notifyErrorRef.current?.(message);
         stop();
         return;
@@ -171,8 +207,9 @@ export function useTrackPreview(
         return;
       }
       if (!validation.ok) {
-        const message = buildErrorMessage(track, validation);
+        const message = buildErrorMessage(track, validation.details);
         setError(message);
+        setFailure({ track, details: validation.details, timestamp: Date.now() });
         notifyErrorRef.current?.(message);
         stop();
         return;
@@ -183,6 +220,7 @@ export function useTrackPreview(
       audio.pause();
       audio.currentTime = 0;
       setError(null);
+      setFailure(null);
 
       const handleEnded = () => {
         stop();
@@ -206,10 +244,12 @@ export function useTrackPreview(
         }
 
         const mediaError = audio.error;
-        const message = buildErrorMessage(track, {
+        const details: PreviewFailureDetails = {
           mediaCode: mediaError?.code ?? undefined
-        });
+        };
+        const message = buildErrorMessage(track, details);
         setError(message);
+        setFailure({ track, details, timestamp: Date.now() });
         notifyErrorRef.current?.(message);
         stop();
       };
@@ -257,6 +297,7 @@ export function useTrackPreview(
 
   const stopPlayback = useCallback(() => {
     setError(null);
+    setFailure(null);
     stop();
   }, [stop]);
 
@@ -268,5 +309,5 @@ export function useTrackPreview(
     }
   }, [isEnabled, stopPlayback]);
 
-  return { activeTrackId, error, togglePreview, stopPlayback };
+  return { activeTrackId, error, failure, togglePreview, stopPlayback };
 }

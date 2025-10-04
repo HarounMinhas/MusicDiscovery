@@ -23,7 +23,7 @@ export default function ArtistDetails({
   onPreviewError
 }: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
-  const { activeTrackId, error: previewError, togglePreview, stopPlayback } = useTrackPreview(
+  const { activeTrackId, error: previewError, failure: previewFailure, togglePreview, stopPlayback } = useTrackPreview(
     previewEnabled,
     onPreviewError
   );
@@ -43,6 +43,14 @@ export default function ArtistDetails({
 
   const displayTopTracks = useMemo(() => topTracks.slice(0, 5), [topTracks]);
   const displayRelated = useMemo(() => relatedArtists.slice(0, 8), [relatedArtists]);
+  const activePreviewFailure = useMemo(() => {
+    if (!previewFailure) {
+      return null;
+    }
+    return displayTopTracks.some((track) => track.id === previewFailure.track.id)
+      ? previewFailure
+      : null;
+  }, [displayTopTracks, previewFailure]);
 
   return (
     <div className="artist-details">
@@ -113,10 +121,32 @@ export default function ArtistDetails({
                     );
                   })}
                 </ol>
-                {previewError ? (
-                  <p className="sr-only" role="status">
-                    {previewError}
-                  </p>
+                {previewError || activePreviewFailure ? (
+                  <div className="track-list__error" role="status" aria-live="polite">
+                    {previewError ? <p>{previewError}</p> : null}
+                    {activePreviewFailure ? (
+                      <dl className="track-list__error-meta">
+                        {activePreviewFailure.details.status ? (
+                          <>
+                            <dt>Status</dt>
+                            <dd>{activePreviewFailure.details.status}</dd>
+                          </>
+                        ) : null}
+                        {activePreviewFailure.details.deezerReference ? (
+                          <>
+                            <dt>Referentie</dt>
+                            <dd>{activePreviewFailure.details.deezerReference}</dd>
+                          </>
+                        ) : null}
+                        {activePreviewFailure.details.deezerIp ? (
+                          <>
+                            <dt>Deezer IP</dt>
+                            <dd>{activePreviewFailure.details.deezerIp}</dd>
+                          </>
+                        ) : null}
+                      </dl>
+                    ) : null}
+                  </div>
                 ) : null}
               </>
             ) : (
