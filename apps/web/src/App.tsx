@@ -11,9 +11,6 @@ import { getSelectedProvider } from './providerSelection';
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
 
-type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
-type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
-
 export default function App(): JSX.Element {
   const [query, setQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
