@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Artist } from '@musicdiscovery/shared';
 import ProviderSwitcher from './components/ProviderSwitcher';
 import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
 import ArtistDetails from './components/ArtistDetails';
+import ArtistTabsBar, { type ArtistTabItem } from './components/ArtistTabsBar';
 import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
@@ -19,6 +21,7 @@ export default function App(): JSX.Element {
     status: searchStatus,
     error: searchError,
     selectedId,
+    highlightedArtist,
     confirmedArtist,
     isPopoverVisible,
     updateQuery,
@@ -27,8 +30,96 @@ export default function App(): JSX.Element {
     selectArtist
   } = useArtistSearch();
 
+  type OpenTab = {
+    id: string;
+    name: string;
+    imageUrl?: string;
+    artist: Artist;
+    openedAt: number;
+    lastActivatedAt: number;
+  };
+
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  const openOrFocusTab = useCallback((artist: Artist) => {
+    setOpenTabs((tabs) => {
+      const now = Date.now();
+      const existing = tabs.find((tab) => tab.id === artist.id);
+      if (existing) {
+        setActiveTabId(artist.id);
+        return tabs.map((tab) =>
+          tab.id === artist.id
+            ? {
+                ...tab,
+                name: artist.name,
+                imageUrl: artist.imageUrl,
+                artist,
+                lastActivatedAt: now
+              }
+            : tab
+        );
+      }
+
+      const nextTab: OpenTab = {
+        id: artist.id,
+        name: artist.name,
+        imageUrl: artist.imageUrl,
+        artist,
+        openedAt: now,
+        lastActivatedAt: now
+      };
+      setActiveTabId(artist.id);
+      return [...tabs, nextTab];
+    });
+  }, []);
+
+  const focusTab = useCallback((id: string) => {
+    setActiveTabId(id);
+    setOpenTabs((tabs) =>
+      tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
+    );
+  }, []);
+
+  const closeTab = useCallback((id: string) => {
+    setOpenTabs((tabs) => {
+      const remaining = tabs.filter((tab) => tab.id !== id);
+      setActiveTabId((current) => {
+        if (current && current !== id) {
+          return current;
+        }
+        if (remaining.length === 0) {
+          return null;
+        }
+        const next = remaining.reduce((latest, tab) =>
+          tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
+        );
+        return next.id;
+      });
+      return remaining;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (confirmedArtist) {
+      openOrFocusTab(confirmedArtist);
+    }
+  }, [confirmedArtist, openOrFocusTab]);
+
+  const activeTab = useMemo(
+    () => (activeTabId ? openTabs.find((tab) => tab.id === activeTabId) ?? null : null),
+    [activeTabId, openTabs]
+  );
+
+  const selectedArtist = activeTab?.artist ?? null;
+
+  const tabItems = useMemo<ArtistTabItem[]>(
+    () => openTabs.map(({ id, name, imageUrl }) => ({ id, name, imageUrl })),
+    [openTabs]
+  );
+
   const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
-    confirmedArtist?.id ?? null
+    activeTabId
   );
 
   const pushToast = useCallback((message: string) => {
@@ -125,6 +216,9 @@ export default function App(): JSX.Element {
                   if (event.key === 'Enter') {
                     event.preventDefault();
                     confirmSelection();
+                    if (highlightedArtist) {
+                      openOrFocusTab(highlightedArtist);
+                    }
                   }
                 }}
                 placeholder="Bijvoorbeeld: Stromae"
@@ -134,7 +228,10 @@ export default function App(): JSX.Element {
                 results={results}
                 selectedId={selectedId}
                 isVisible={isPopoverVisible}
-                onSelect={selectArtist}
+                onSelect={(artist) => {
+                  selectArtist(artist);
+                  openOrFocusTab(artist);
+                }}
               />
             </div>
           </div>
@@ -157,16 +254,27 @@ export default function App(): JSX.Element {
         </section>
 
         <section className="details-panel">
-          {confirmedArtist ? (
-            <ArtistDetails
-              artist={confirmedArtist}
-              status={detailStatus}
-              topTracks={topTracks}
-              relatedArtists={relatedArtists}
-              error={detailError}
-              provider={provider}
-              onPreviewError={pushToast}
-            />
+          {openTabs.length > 0 ? (
+            <>
+              <ArtistTabsBar tabs={tabItems} activeId={activeTabId} onSelect={focusTab} onClose={closeTab} />
+              {selectedArtist ? (
+                <ArtistDetails
+                  artist={selectedArtist}
+                  status={detailStatus}
+                  topTracks={topTracks}
+                  relatedArtists={relatedArtists}
+                  error={detailError}
+                  provider={provider}
+                  onPreviewError={pushToast}
+                  onOpenRelated={openOrFocusTab}
+                />
+              ) : (
+                <div className="placeholder">
+                  <p className="label">Artiestdetails</p>
+                  <p className="muted">Selecteer een artiest om de details te bekijken.</p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="placeholder">
               <p className="label">Artiestdetails</p>
