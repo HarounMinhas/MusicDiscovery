@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "lint": "echo 'lint pending'",
-    "test": "vitest"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@musicdiscovery/shared": "workspace:*",
