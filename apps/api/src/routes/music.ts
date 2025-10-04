@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { env } from '../env.js';
 import { withCache } from '../cache.js';
+import { getSmartRelated } from '../controllers/deezerSmartController.js';
 import {
   ArtistSchema,
   RelatedArtistsResponseSchema,
@@ -115,6 +116,10 @@ router.get('/music/tracks/:id', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+router.get('/deezer/related-smart', (req, res) => {
+  void getSmartRelated(req, res);
 });
 
 export default router;
