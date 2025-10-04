@@ -10,11 +10,23 @@ interface ArtistDetailsProps {
   relatedArtists: Artist[];
   error: string | null;
   provider: ProviderId;
+  onPreviewError?: (message: string) => void;
 }
 
-export default function ArtistDetails({ artist, status, topTracks, relatedArtists, error, provider }: ArtistDetailsProps) {
+export default function ArtistDetails({
+  artist,
+  status,
+  topTracks,
+  relatedArtists,
+  error,
+  provider,
+  onPreviewError
+}: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
-  const { activeTrackId, error: previewError, togglePreview, stopPlayback } = useTrackPreview(previewEnabled);
+  const { activeTrackId, error: previewError, togglePreview, stopPlayback } = useTrackPreview(
+    previewEnabled,
+    onPreviewError
+  );
 
   useEffect(() => {
     stopPlayback();
@@ -50,7 +62,11 @@ export default function ArtistDetails({ artist, status, topTracks, relatedArtist
       </header>
 
       {status === 'loading' && <LoadingIndicator label="Artiestdetails laden…" />}
-      {status === 'error' && error ? <p className="error">{error}</p> : null}
+      {status === 'error' && error ? (
+        <p className="sr-only" role="status">
+          {error}
+        </p>
+      ) : null}
 
       {status !== 'loading' && status !== 'error' ? (
         <div className="details-grid">
@@ -97,7 +113,11 @@ export default function ArtistDetails({ artist, status, topTracks, relatedArtist
                     );
                   })}
                 </ol>
-                {previewError ? <p className="track-list__error">{previewError}</p> : null}
+                {previewError ? (
+                  <p className="sr-only" role="status">
+                    {previewError}
+                  </p>
+                ) : null}
               </>
             ) : (
               <ol className="track-list">

@@ -37,3 +37,7 @@ export async function getTopTracks(id: string, market?: string, limit = 10): Pro
   const data = await request<{ items: Track[] }>(`/music/artists/${id}/top-tracks?${params.toString()}`);
   return data.items;
 }
+
+export async function getTrack(id: string): Promise<Track> {
+  return request<Track>(`/music/tracks/${encodeURIComponent(id)}`);
+}

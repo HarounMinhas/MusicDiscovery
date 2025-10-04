@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ProviderSwitcher from './components/ProviderSwitcher';
 import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
@@ -10,6 +10,9 @@ import { useArtistDetails } from './hooks/useArtistDetails';
 
 export default function App(): JSX.Element {
   const [provider] = useState(() => getSelectedProvider());
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
+  const toastIdRef = useRef(0);
+  const toastTimersRef = useRef(new Map<number, number>());
   const {
     query,
     results,
@@ -28,8 +31,69 @@ export default function App(): JSX.Element {
     confirmedArtist?.id ?? null
   );
 
+  const pushToast = useCallback((message: string) => {
+    const text = message.trim();
+    if (!text) {
+      return;
+    }
+
+    setToasts((current) => {
+      const id = ++toastIdRef.current;
+      const trimmed = current.slice(0, Math.max(0, current.length - 2));
+      trimmed.forEach((toast) => {
+        const timer = toastTimersRef.current.get(toast.id);
+        if (timer) {
+          window.clearTimeout(timer);
+          toastTimersRef.current.delete(toast.id);
+        }
+      });
+      const next = [...current.slice(-2), { id, message: text }];
+      const timeout = window.setTimeout(() => {
+        setToasts((existing) => existing.filter((toast) => toast.id !== id));
+        toastTimersRef.current.delete(id);
+      }, 4200);
+      toastTimersRef.current.set(id, timeout);
+      return next;
+    });
+  }, []);
+
+  useEffect(
+    () => () => {
+      toastTimersRef.current.forEach((timeout) => window.clearTimeout(timeout));
+      toastTimersRef.current.clear();
+    },
+    []
+  );
+
+  const lastSearchErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (searchStatus === 'error' && searchError && lastSearchErrorRef.current !== searchError) {
+      lastSearchErrorRef.current = searchError;
+      pushToast(searchError);
+    } else if (searchStatus !== 'error') {
+      lastSearchErrorRef.current = null;
+    }
+  }, [searchError, searchStatus, pushToast]);
+
+  const lastDetailErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (detailStatus === 'error' && detailError && lastDetailErrorRef.current !== detailError) {
+      lastDetailErrorRef.current = detailError;
+      pushToast(detailError);
+    } else if (detailStatus !== 'error') {
+      lastDetailErrorRef.current = null;
+    }
+  }, [detailError, detailStatus, pushToast]);
+
   return (
     <div className="app">
+      <div className="app__toasts" aria-live="polite" aria-atomic="true">
+        {toasts.map((toast) => (
+          <div key={toast.id} className="app__toast" role="alert">
+            {toast.message}
+          </div>
+        ))}
+      </div>
       <header className="app__header">
         <div>
           <p className="label">MusicDiscovery</p>
@@ -80,7 +144,11 @@ export default function App(): JSX.Element {
           ) : null}
 
           {searchStatus === 'loading' ? <LoadingIndicator label="Resultaten laden…" /> : null}
-          {searchStatus === 'error' && searchError ? <p className="error">{searchError}</p> : null}
+          {searchStatus === 'error' && searchError ? (
+            <p className="sr-only" role="status">
+              {searchError}
+            </p>
+          ) : null}
 
           {searchStatus === 'success' && results.length === 0 ? (
             <p className="muted">Geen artiesten gevonden voor "{query}".</p>
@@ -97,6 +165,7 @@ export default function App(): JSX.Element {
               relatedArtists={relatedArtists}
               error={detailError}
               provider={provider}
+              onPreviewError={pushToast}
             />
           ) : (
             <div className="placeholder">
