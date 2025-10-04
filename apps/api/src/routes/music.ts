@@ -89,7 +89,7 @@ router.get('/music/artists/:id/top-tracks', async (req, res, next) => {
     const { mode, provider } = resolveProvider(req);
     const items = await withCache(
       `artist:${mode}:${req.params.id}:top:${market}:${limit}`,
-      1000 * 60 * 60 * 6,
+      1000 * 60 * 5,
       () => provider.getTopTracks(req.params.id, market, limit)
     );
     const parsed = TopTracksResponseSchema.parse({ items });
@@ -104,7 +104,7 @@ router.get('/music/tracks/:id', async (req, res, next) => {
     const { mode, provider } = resolveProvider(req);
     const track = await withCache(
       `track:${mode}:${req.params.id}`,
-      1000 * 60 * 60 * 24,
+      1000 * 60 * 5,
       () => provider.getTrack(req.params.id)
     );
     if (!track) {

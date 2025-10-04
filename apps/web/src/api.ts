@@ -1,5 +1,5 @@
 import type { Artist, ProviderId, ProviderMetadata, Track } from '@musicdiscovery/shared';
-import { getSelectedProvider } from './providerSelection.js';
+import { getSelectedProvider } from './providerSelection';
 
 const baseUrl = (import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api').replace(/\/$/, '');
 
@@ -36,4 +36,8 @@ export async function getTopTracks(id: string, market?: string, limit = 10): Pro
   if (market) params.set('market', market);
   const data = await request<{ items: Track[] }>(`/music/artists/${id}/top-tracks?${params.toString()}`);
   return data.items;
+}
+
+export async function getTrack(id: string): Promise<Track> {
+  return request<Track>(`/music/tracks/${encodeURIComponent(id)}`);
 }
