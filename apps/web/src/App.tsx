@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Artist, Track } from '@musicdiscovery/shared';
 import { getRelatedArtists, getTopTracks, searchArtists } from './api';
 import ProviderSwitcher from './components/ProviderSwitcher';
@@ -11,21 +11,15 @@ import { getSelectedProvider } from './providerSelection';
 type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
 type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
 
+type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
+type DetailStatus = 'idle' | 'loading' | 'success' | 'error';
+
 export default function App(): JSX.Element {
   const [query, setQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [results, setResults] = useState<Artist[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isResultsOpen, setIsResultsOpen] = useState(false);
-  const [isManuallyHidden, setIsManuallyHidden] = useState(false);
-  const isManuallyHiddenRef = useRef(isManuallyHidden);
-
-  useEffect(() => {
-    isManuallyHiddenRef.current = isManuallyHidden;
-  }, [isManuallyHidden]);
-
-  const [provider] = useState(() => getSelectedProvider());
 
   const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle');
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -43,8 +37,6 @@ export default function App(): JSX.Element {
       setSearchStatus('idle');
       setSearchError(null);
       setSelectedId(null);
-      setIsResultsOpen(false);
-      setIsManuallyHidden(false);
       return;
     }
 
@@ -58,7 +50,6 @@ export default function App(): JSX.Element {
           if (cancelled) return;
           setResults(items);
           setSearchStatus('success');
-          setIsResultsOpen(items.length > 0 && !isManuallyHiddenRef.current);
           if (items.length === 0) {
             setSelectedId(null);
           } else if (!items.some((item) => item.id === selectedId)) {
@@ -70,8 +61,6 @@ export default function App(): JSX.Element {
           setSearchStatus('error');
           setSearchError(err instanceof Error ? err.message : String(err));
           setResults([]);
-          setIsResultsOpen(false);
-          setIsManuallyHidden(false);
         });
     }, 350);
 
@@ -133,45 +122,13 @@ export default function App(): JSX.Element {
             <label htmlFor="artist-search" className="label">
               Zoek naar een artiest
             </label>
-            <div className="search-panel__input-wrapper">
-              <input
-                id="artist-search"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setIsManuallyHidden(false);
-                  setIsResultsOpen(true);
-                }}
-                onFocus={() => {
-                  if (results.length > 0) {
-                    setIsManuallyHidden(false);
-                    setIsResultsOpen(true);
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    if (!selectedId && results[0]) {
-                      setSelectedId(results[0].id);
-                    }
-                    setIsManuallyHidden(true);
-                    setIsResultsOpen(false);
-                  }
-                }}
-                placeholder="Bijvoorbeeld: Stromae"
-                autoComplete="off"
-              />
-              <SearchResultsList
-                results={results}
-                selectedId={selectedId}
-                isVisible={isResultsOpen && results.length > 0}
-                onSelect={(artist) => {
-                  setSelectedId(artist.id);
-                  setIsManuallyHidden(true);
-                  setIsResultsOpen(false);
-                }}
-              />
-            </div>
+            <input
+              id="artist-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Bijvoorbeeld: Stromae"
+              autoComplete="off"
+            />
           </div>
 
           {searchStatus === 'idle' && results.length === 0 ? (
@@ -185,6 +142,11 @@ export default function App(): JSX.Element {
             <p className="muted">Geen artiesten gevonden voor "{query}".</p>
           ) : null}
 
+          <SearchResultsList
+            results={results}
+            selectedId={selectedId}
+            onSelect={(artist) => setSelectedId(artist.id)}
+          />
         </section>
 
         <section className="details-panel">
@@ -195,7 +157,6 @@ export default function App(): JSX.Element {
               topTracks={topTracks}
               relatedArtists={relatedArtists}
               error={detailError}
-              provider={provider}
             />
           ) : (
             <div className="placeholder">
