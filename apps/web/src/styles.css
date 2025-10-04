@@ -23,9 +23,10 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
-  padding: 2.5rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
   max-width: 1100px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .app__toasts {
@@ -90,6 +91,18 @@ a {
   gap: 2rem;
 }
 
+@media (max-width: 860px) {
+  .app__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+
+  .app__header > * {
+    width: 100%;
+  }
+}
+
 .app__header h1 {
   margin: 0.25rem 0 0.75rem;
   font-size: clamp(2rem, 3vw, 2.75rem);
@@ -118,15 +131,9 @@ a {
 }
 
 .app__body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
-  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
-}
-
-@media (max-width: 960px) {
-  .app__body {
-    grid-template-columns: 1fr;
-  }
 }
 
 .search-panel {
@@ -140,6 +147,14 @@ a {
   backdrop-filter: blur(18px);
   position: relative;
   z-index: 2;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .search-panel {
+    width: 100%;
+    padding: 1.5rem;
+  }
 }
 
 .search-panel__input input {
@@ -261,11 +276,17 @@ a {
   background: rgba(10, 15, 25, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 1.5rem;
-  padding: 2rem;
+  padding: clamp(1.75rem, 4vw, 2rem);
   backdrop-filter: blur(18px);
   min-height: 420px;
   position: relative;
   z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .details-panel {
+    padding: 1.5rem;
+  }
 }
 
 .artist-details header {
@@ -273,6 +294,14 @@ a {
   gap: 1.5rem;
   align-items: center;
   margin-bottom: 1.75rem;
+}
+
+@media (max-width: 640px) {
+  .artist-details header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
 }
 
 .artist-details header img,
@@ -589,6 +618,24 @@ a {
   margin-bottom: 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   overflow-x: auto;
+  width: 100%;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+  padding-bottom: 0.35rem;
+}
+
+.artist-tabsbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.artist-tabsbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+}
+
+.artist-tabsbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .artist-tab {
