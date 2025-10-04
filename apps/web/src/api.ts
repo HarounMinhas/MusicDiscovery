@@ -1,5 +1,5 @@
 import type { Artist, ProviderId, ProviderMetadata, Track } from '@musicdiscovery/shared';
-import { getSelectedProvider } from './providerSelection.js';
+import { getSelectedProvider } from './providerSelection';
 
 const baseUrl = (import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api').replace(/\/$/, '');
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PROVIDERS, type ProviderId, type ProviderMetadata } from '@musicdiscovery/shared';
-import { getProviderCatalog } from '../api.js';
-import { getSelectedProvider, setSelectedProvider, syncProviderSelection } from '../providerSelection.js';
+import { getProviderCatalog } from '../api';
+import { getSelectedProvider, setSelectedProvider, syncProviderSelection } from '../providerSelection';
 
 export default function ProviderSwitcher() {
   const [options, setOptions] = useState<ProviderMetadata[]>(PROVIDERS);
@@ -46,20 +46,14 @@ export default function ProviderSwitcher() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="provider-switcher">
+      <label>
         <span className="label">Provider</span>
         <select
           value={value}
           onChange={handleChange}
           disabled={loading && options.length === 0}
-          style={{
-            background: '#0f1320',
-            color: 'white',
-            borderRadius: 8,
-            border: '1px solid #2a334c',
-            padding: '6px 10px'
-          }}
+          className="provider-switcher__select"
         >
           {options.map((option) => (
             <option key={option.id} value={option.id}>
@@ -68,7 +62,12 @@ export default function ProviderSwitcher() {
           ))}
         </select>
       </label>
-      {error ? <span className="label" style={{ color: '#ffb4b4' }}>{error}</span> : null}
+      {loading ? <span className="muted provider-switcher__hint">Laden…</span> : null}
+      {error ? (
+        <span className="error provider-switcher__hint" role="alert">
+          {error}
+        </span>
+      ) : null}
     </div>
   );
 }
