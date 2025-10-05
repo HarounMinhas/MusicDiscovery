@@ -3,12 +3,84 @@
   font-family: 'Inter', system-ui, sans-serif;
   background: radial-gradient(circle at top left, #1a2238, #090c14 55%);
   color: #f4f5f7;
+  --background-pulse-duration: 1100;
+  --background-pulse-scale-1: 1.14;
+  --background-pulse-scale-2: 1.07;
+  --background-pulse-glow: 22px;
+  --background-pulse-opacity: 0.65;
+  --background-pulse-color: rgba(132, 161, 255, 0.95);
+  --background-pulse-color-soft: rgba(132, 161, 255, 0.4);
+  --background-pulse-move-padding: 14;
 }
 
 body, html, #root {
   margin: 0;
   min-height: 100%;
   background: transparent;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+}
+
+body::before {
+  inset: 0;
+  background: radial-gradient(circle at top left, #1a2238, #090c14 55%);
+  z-index: -3;
+}
+
+.background-pulse {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -2;
+  background: radial-gradient(circle at 32% 22%, rgba(21, 28, 48, 0.45), rgba(6, 8, 18, 0.7));
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0));
+}
+
+.background-pulse__dot {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  background: var(--background-pulse-color);
+  border-radius: 50%;
+  opacity: var(--background-pulse-opacity);
+  transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
+  box-shadow:
+    0 0 var(--background-pulse-glow) var(--background-pulse-color-soft),
+    0 0 calc(var(--background-pulse-glow) * 0.55) rgba(132, 161, 255, 0.24);
+  animation: backgroundHeartbeat calc(var(--background-pulse-duration) * 1ms) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes backgroundHeartbeat {
+  0% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
+    opacity: var(--background-pulse-opacity);
+  }
+  15% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(var(--background-pulse-scale-1));
+    opacity: 1;
+  }
+  28% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1.02);
+    opacity: var(--background-pulse-opacity);
+  }
+  45% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(var(--background-pulse-scale-2));
+    opacity: 1;
+  }
+  60% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1.01);
+    opacity: var(--background-pulse-opacity);
+  }
+  100% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
+    opacity: var(--background-pulse-opacity);
+  }
 }
 
 * {
@@ -91,6 +163,13 @@ a {
   gap: 2rem;
 }
 
+.app__header-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
 @media (max-width: 860px) {
   .app__header {
     flex-direction: column;
@@ -101,6 +180,10 @@ a {
   .app__header > * {
     width: 100%;
   }
+
+  .app__header-controls {
+    align-items: stretch;
+  }
 }
 
 .app__header h1 {
@@ -110,6 +193,56 @@ a {
 
 .app__header .muted {
   max-width: 520px;
+}
+
+.background-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.background-toggle__buttons {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 25, 0.55);
+  box-shadow: 0 16px 30px rgba(4, 8, 20, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.background-toggle__button {
+  background: transparent;
+  border: none;
+  color: rgba(244, 245, 247, 0.72);
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.background-toggle__button:hover {
+  color: #f4f5f7;
+  background: rgba(119, 153, 255, 0.18);
+}
+
+.background-toggle__button.is-active {
+  color: #f4f5f7;
+  background: rgba(119, 153, 255, 0.28);
+  box-shadow: 0 14px 32px rgba(5, 9, 18, 0.45);
+}
+
+.background-toggle__label {
+  color: rgba(244, 245, 247, 0.65);
+}
+
+@media (max-width: 860px) {
+  .background-toggle {
+    align-items: flex-start;
+  }
 }
 
 .label {
