@@ -3,14 +3,8 @@
   font-family: 'Inter', system-ui, sans-serif;
   background: radial-gradient(circle at top left, #1a2238, #090c14 55%);
   color: #f4f5f7;
-  --background-pulse-duration: 1100;
-  --background-pulse-scale-1: 1.14;
-  --background-pulse-scale-2: 1.07;
-  --background-pulse-glow: 22px;
-  --background-pulse-opacity: 0.65;
-  --background-pulse-color: rgba(132, 161, 255, 0.95);
-  --background-pulse-color-soft: rgba(132, 161, 255, 0.4);
-  --background-pulse-move-padding: 14;
+  --background-pulse-duration: 20000;
+  --background-pulse-move-padding: 18;
 }
 
 body, html, #root {
@@ -37,49 +31,49 @@ body::before {
   pointer-events: none;
   overflow: hidden;
   z-index: -2;
-  background: radial-gradient(circle at 32% 22%, rgba(21, 28, 48, 0.45), rgba(6, 8, 18, 0.7));
-  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0));
 }
 
-.background-pulse__dot {
+.background-pulse__orb {
   position: absolute;
-  width: 28px;
-  height: 28px;
-  background: var(--background-pulse-color);
-  border-radius: 50%;
-  opacity: var(--background-pulse-opacity);
-  transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
-  box-shadow:
-    0 0 var(--background-pulse-glow) var(--background-pulse-color-soft),
-    0 0 calc(var(--background-pulse-glow) * 0.55) rgba(132, 161, 255, 0.24);
-  animation: backgroundHeartbeat calc(var(--background-pulse-duration) * 1ms) infinite;
-  will-change: transform, opacity;
+  width: 140vmax;
+  height: 140vmax;
+  left: 50%;
+  top: 50%;
+  transform: translate3d(calc(-50% + var(--pulse-offset-x, 0px)), calc(-50% + var(--pulse-offset-y, 0px)), 0);
+  transition: transform 6s ease-in-out;
+  pointer-events: none;
 }
 
-@keyframes backgroundHeartbeat {
+.background-pulse__orb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(58, 82, 132, 0.62) 0%,
+    rgba(46, 64, 116, 0.42) 28%,
+    rgba(26, 34, 68, 0.18) 56%,
+    rgba(12, 16, 32, 0)
+  );
+  mix-blend-mode: screen;
+  opacity: 0.08;
+  transform: scale(1);
+  animation: backgroundPulseGlow calc(var(--background-pulse-duration) * 1ms) ease-in-out infinite;
+}
+
+@keyframes backgroundPulseGlow {
   0% {
-    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
-    opacity: var(--background-pulse-opacity);
+    opacity: 0.08;
+    transform: scale(1);
   }
-  15% {
-    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(var(--background-pulse-scale-1));
-    opacity: 1;
-  }
-  28% {
-    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1.02);
-    opacity: var(--background-pulse-opacity);
-  }
-  45% {
-    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(var(--background-pulse-scale-2));
-    opacity: 1;
-  }
-  60% {
-    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1.01);
-    opacity: var(--background-pulse-opacity);
+  50% {
+    opacity: 0.42;
+    transform: scale(1.12);
   }
   100% {
-    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
-    opacity: var(--background-pulse-opacity);
+    opacity: 0.08;
+    transform: scale(1);
   }
 }
 

@@ -1,30 +1,31 @@
 import React, { useEffect, useRef } from 'react';
 
-const DEFAULT_DURATION = 1100;
-const DEFAULT_PADDING = 12;
+const DEFAULT_DURATION = 20000;
+const DEFAULT_PADDING = 18;
 
 export default function BackgroundPulse(): JSX.Element {
   const stageRef = useRef<HTMLDivElement | null>(null);
-  const dotRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<number>();
   const lastMoveRef = useRef<number>(performance.now());
+  const targetRef = useRef({ x: 0.48, y: 0.38 });
 
   useEffect(() => {
     const stage = stageRef.current;
-    const dot = dotRef.current;
-    if (!stage || !dot) {
+    if (!stage) {
       return;
     }
 
     const rootStyles = getComputedStyle(document.documentElement);
     const duration = parseFloat(rootStyles.getPropertyValue('--background-pulse-duration')) || DEFAULT_DURATION;
 
-    const movePadding = parseFloat(
+    const movePaddingRaw = parseFloat(
       rootStyles.getPropertyValue('--background-pulse-move-padding') || String(DEFAULT_PADDING)
     );
-    const clampedPadding = Number.isFinite(movePadding) ? Math.min(Math.max(movePadding, 0), 40) : DEFAULT_PADDING;
+    const clampedPadding = Number.isFinite(movePaddingRaw)
+      ? Math.min(Math.max(movePaddingRaw, 0), 45)
+      : DEFAULT_PADDING;
 
-    setPosition(0.5, 0.5);
+    applyCenter(stage, targetRef.current.x, targetRef.current.y);
     lastMoveRef.current = performance.now();
 
     const tick = (now: number) => {
@@ -37,6 +38,12 @@ export default function BackgroundPulse(): JSX.Element {
 
     frameRef.current = requestAnimationFrame(tick);
 
+    const handleResize = () => {
+      applyCenter(stage, targetRef.current.x, targetRef.current.y);
+    };
+
+    window.addEventListener('resize', handleResize);
+
     function moveToRandomSpot() {
       const paddingRatio = clampedPadding / 100;
       const minX = paddingRatio;
@@ -46,31 +53,37 @@ export default function BackgroundPulse(): JSX.Element {
 
       const x = randomInRange(minX, maxX);
       const y = randomInRange(minY, maxY);
-      setPosition(x, y);
-    }
-
-    function setPosition(xNorm: number, yNorm: number) {
-      const rect = stage.getBoundingClientRect();
-      const dotWidth = dot.offsetWidth || 0;
-      const dotHeight = dot.offsetHeight || 0;
-      const x = xNorm * rect.width - dotWidth / 2;
-      const y = yNorm * rect.height - dotHeight / 2;
-      dot.style.setProperty('--pulse-tx', `${x}px`);
-      dot.style.setProperty('--pulse-ty', `${y}px`);
+      targetRef.current = { x, y };
+      applyCenter(stage, x, y);
     }
 
     return () => {
       if (frameRef.current !== undefined) {
         cancelAnimationFrame(frameRef.current);
       }
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
   return (
     <div className="background-pulse" ref={stageRef} aria-hidden="true">
-      <div className="background-pulse__dot" ref={dotRef} />
+      <div className="background-pulse__orb" />
     </div>
   );
+}
+
+function applyCenter(stage: HTMLDivElement, xNorm: number, yNorm: number) {
+  const rect = stage.getBoundingClientRect();
+  const { width, height } = rect;
+  if (width === 0 || height === 0) {
+    stage.style.setProperty('--pulse-offset-x', '0px');
+    stage.style.setProperty('--pulse-offset-y', '0px');
+    return;
+  }
+  const offsetX = xNorm * width - width / 2;
+  const offsetY = yNorm * height - height / 2;
+  stage.style.setProperty('--pulse-offset-x', `${offsetX.toFixed(2)}px`);
+  stage.style.setProperty('--pulse-offset-y', `${offsetY.toFixed(2)}px`);
 }
 
 function randomInRange(min: number, max: number) {
