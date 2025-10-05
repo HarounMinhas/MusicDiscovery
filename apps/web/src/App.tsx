@@ -5,6 +5,7 @@ import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
 import ArtistDetails from './components/ArtistDetails';
 import ArtistTabsBar, { type ArtistTabItem } from './components/ArtistTabsBar';
+import BackgroundToggle, { type BackgroundMode } from './components/BackgroundToggle';
 import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
@@ -12,6 +13,15 @@ import { useArtistDetails } from './hooks/useArtistDetails';
 
 export default function App(): JSX.Element {
   const [provider] = useState(() => getSelectedProvider());
+  const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem('background-mode');
+      if (stored === 'static' || stored === 'animated') {
+        return stored;
+      }
+    }
+    return 'static';
+  });
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const toastIdRef = useRef(0);
   const toastTimersRef = useRef(new Map<number, number>());
@@ -41,6 +51,28 @@ export default function App(): JSX.Element {
 
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const { body, documentElement } = document;
+    body.dataset.background = backgroundMode;
+    documentElement.dataset.background = backgroundMode;
+
+    return () => {
+      delete body.dataset.background;
+      delete documentElement.dataset.background;
+    };
+  }, [backgroundMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem('background-mode', backgroundMode);
+  }, [backgroundMode]);
 
   const openOrFocusTab = useCallback((artist: Artist) => {
     setOpenTabs((tabs) => {
@@ -193,7 +225,10 @@ export default function App(): JSX.Element {
             Zoek cross-provider en bekijk meteen de populairste nummers en gerelateerde artiesten.
           </p>
         </div>
-        <ProviderSwitcher />
+        <div className="app__header-controls">
+          <BackgroundToggle value={backgroundMode} onChange={setBackgroundMode} />
+          <ProviderSwitcher />
+        </div>
       </header>
 
       <main className="app__body">
