@@ -3,6 +3,14 @@
   font-family: 'Inter', system-ui, sans-serif;
   background: radial-gradient(circle at top left, #1a2238, #090c14 55%);
   color: #f4f5f7;
+  --background-pulse-duration: 1100;
+  --background-pulse-scale-1: 1.14;
+  --background-pulse-scale-2: 1.07;
+  --background-pulse-glow: 22px;
+  --background-pulse-opacity: 0.65;
+  --background-pulse-color: rgba(132, 161, 255, 0.95);
+  --background-pulse-color-soft: rgba(132, 161, 255, 0.4);
+  --background-pulse-move-padding: 14;
 }
 
 body, html, #root {
@@ -11,8 +19,7 @@ body, html, #root {
   background: transparent;
 }
 
-body::before,
-body::after {
+body::before {
   content: '';
   position: fixed;
   pointer-events: none;
@@ -24,65 +31,55 @@ body::before {
   z-index: -3;
 }
 
-body::after {
-  top: -28vh;
-  left: -28vw;
-  width: 156vw;
-  height: 156vh;
-  background: radial-gradient(circle, rgba(26, 34, 56, 0.75) 0%, rgba(9, 12, 20, 0.15) 45%, rgba(9, 12, 20, 0) 68%);
-  opacity: 0;
-  transform: translate3d(-12%, -16%, 0) scale(1.08);
-  transition: opacity 600ms ease;
-  filter: saturate(120%);
-  mix-blend-mode: screen;
+.background-pulse {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
   z-index: -2;
+  background: radial-gradient(circle at 32% 22%, rgba(21, 28, 48, 0.45), rgba(6, 8, 18, 0.7));
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0));
 }
 
-body[data-background='animated']::after {
-  animation: gradientGlow 24s ease-in-out infinite;
+.background-pulse__dot {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  background: var(--background-pulse-color);
+  border-radius: 50%;
+  opacity: var(--background-pulse-opacity);
+  transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
+  box-shadow:
+    0 0 var(--background-pulse-glow) var(--background-pulse-color-soft),
+    0 0 calc(var(--background-pulse-glow) * 0.55) rgba(132, 161, 255, 0.24);
+  animation: backgroundHeartbeat calc(var(--background-pulse-duration) * 1ms) infinite;
+  will-change: transform, opacity;
 }
 
-body[data-background='static']::after {
-  animation: none;
-  opacity: 0;
-}
-
-@keyframes gradientGlow {
+@keyframes backgroundHeartbeat {
   0% {
-    opacity: 0;
-    transform: translate3d(-14%, -18%, 0) scale(1.05);
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
+    opacity: var(--background-pulse-opacity);
   }
-  12% {
-    opacity: 0.42;
-    transform: translate3d(4%, -12%, 0) scale(1.12);
+  15% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(var(--background-pulse-scale-1));
+    opacity: 1;
   }
-  25% {
-    opacity: 0.12;
-    transform: translate3d(22%, -20%, 0) scale(1.05);
+  28% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1.02);
+    opacity: var(--background-pulse-opacity);
   }
-  37% {
-    opacity: 0.48;
-    transform: translate3d(34%, 6%, 0) scale(1.18);
+  45% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(var(--background-pulse-scale-2));
+    opacity: 1;
   }
-  50% {
-    opacity: 0.08;
-    transform: translate3d(18%, 26%, 0) scale(1.08);
-  }
-  62% {
-    opacity: 0.4;
-    transform: translate3d(-6%, 32%, 0) scale(1.16);
-  }
-  74% {
-    opacity: 0.1;
-    transform: translate3d(-20%, 18%, 0) scale(1.04);
-  }
-  86% {
-    opacity: 0.44;
-    transform: translate3d(-28%, -6%, 0) scale(1.17);
+  60% {
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1.01);
+    opacity: var(--background-pulse-opacity);
   }
   100% {
-    opacity: 0;
-    transform: translate3d(-14%, -18%, 0) scale(1.05);
+    transform: translate3d(var(--pulse-tx, -50%), var(--pulse-ty, -50%), 0) scale(1);
+    opacity: var(--background-pulse-opacity);
   }
 }
 

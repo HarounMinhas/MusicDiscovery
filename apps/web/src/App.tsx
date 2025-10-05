@@ -6,6 +6,7 @@ import SearchResultsList from './components/SearchResultsList';
 import ArtistDetails from './components/ArtistDetails';
 import ArtistTabsBar, { type ArtistTabItem } from './components/ArtistTabsBar';
 import BackgroundToggle, { type BackgroundMode } from './components/BackgroundToggle';
+import BackgroundPulse from './components/BackgroundPulse';
 import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
@@ -210,6 +211,7 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
+      {backgroundMode === 'animated' ? <BackgroundPulse /> : null}
       <div className="app__toasts" aria-live="polite" aria-atomic="true">
         {toasts.map((toast) => (
           <div key={toast.id} className="app__toast" role="alert">
