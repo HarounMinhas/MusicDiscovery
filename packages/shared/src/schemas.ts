@@ -32,6 +32,30 @@ export const RelatedArtistsResponseSchema = z.object({
 
 export type RelatedArtistsResponse = z.infer<typeof RelatedArtistsResponseSchema>;
 
+export const SmartRelatedStrategySchema = z.enum(['deezer-related', 'fallback-members-aggregation']);
+
+export const DeezerSmartArtistSchema = z.object({
+  id: z.union([z.number(), z.string()]),
+  name: z.string(),
+  link: z.string().url().optional(),
+  picture: z.string().url().optional(),
+  picture_small: z.string().url().optional(),
+  picture_medium: z.string().url().optional(),
+  picture_big: z.string().url().optional(),
+  picture_xl: z.string().url().optional(),
+  nb_fan: z.number().optional()
+});
+
+export const SmartRelatedResponseSchema = z.object({
+  query: z.string(),
+  strategy: SmartRelatedStrategySchema,
+  items: z.array(DeezerSmartArtistSchema),
+  cache: z.object({ hit: z.boolean() }),
+  tookMs: z.number()
+});
+
+export type SmartRelatedResponse = z.infer<typeof SmartRelatedResponseSchema>;
+
 export const TopTracksResponseSchema = z.object({
   items: z.array(TrackSchema)
 });
