@@ -77,9 +77,12 @@ describe('useArtistDetails', () => {
         })
     );
 
-    const { result, rerender } = renderHook(({ id }) => useArtistDetails(id), {
-      initialProps: { id: 'artist-2' }
-    });
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) => useArtistDetails(id),
+      {
+        initialProps: { id: 'artist-2' }
+      }
+    );
 
     await waitFor(() => expect(fetchArtistDetailsMock).toHaveBeenCalledTimes(1));
     rerender({ id: 'artist-2' });
