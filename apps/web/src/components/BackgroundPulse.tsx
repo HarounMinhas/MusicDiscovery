@@ -15,6 +15,8 @@ export default function BackgroundPulse(): JSX.Element {
       return;
     }
 
+    const applyWithStage = (x: number, y: number) => applyCenter(stage, x, y);
+
     const rootStyles = getComputedStyle(document.documentElement);
     const duration = parseFloat(rootStyles.getPropertyValue('--background-pulse-duration')) || DEFAULT_DURATION;
 
@@ -25,7 +27,7 @@ export default function BackgroundPulse(): JSX.Element {
       ? Math.min(Math.max(movePaddingRaw, 0), 45)
       : DEFAULT_PADDING;
 
-    applyCenter(stage, targetRef.current.x, targetRef.current.y);
+    applyWithStage(targetRef.current.x, targetRef.current.y);
     lastMoveRef.current = performance.now();
 
     const tick = (now: number) => {
@@ -39,7 +41,7 @@ export default function BackgroundPulse(): JSX.Element {
     frameRef.current = requestAnimationFrame(tick);
 
     const handleResize = () => {
-      applyCenter(stage, targetRef.current.x, targetRef.current.y);
+      applyWithStage(targetRef.current.x, targetRef.current.y);
     };
 
     window.addEventListener('resize', handleResize);
@@ -54,7 +56,7 @@ export default function BackgroundPulse(): JSX.Element {
       const x = randomInRange(minX, maxX);
       const y = randomInRange(minY, maxY);
       targetRef.current = { x, y };
-      applyCenter(stage, x, y);
+      applyWithStage(x, y);
     }
 
     return () => {
