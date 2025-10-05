@@ -3,12 +3,78 @@
   font-family: 'Inter', system-ui, sans-serif;
   background: radial-gradient(circle at top left, #1a2238, #090c14 55%);
   color: #f4f5f7;
+  --background-pulse-duration: 20000;
+  --background-pulse-move-padding: 18;
 }
 
 body, html, #root {
   margin: 0;
   min-height: 100%;
   background: transparent;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+}
+
+body::before {
+  inset: 0;
+  background: radial-gradient(circle at top left, #1a2238, #090c14 55%);
+  z-index: -3;
+}
+
+.background-pulse {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -2;
+}
+
+.background-pulse__orb {
+  position: absolute;
+  width: 140vmax;
+  height: 140vmax;
+  left: 50%;
+  top: 50%;
+  transform: translate3d(calc(-50% + var(--pulse-offset-x, 0px)), calc(-50% + var(--pulse-offset-y, 0px)), 0);
+  transition: transform 6s ease-in-out;
+  pointer-events: none;
+}
+
+.background-pulse__orb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(58, 82, 132, 0.62) 0%,
+    rgba(46, 64, 116, 0.42) 28%,
+    rgba(26, 34, 68, 0.18) 56%,
+    rgba(12, 16, 32, 0)
+  );
+  mix-blend-mode: screen;
+  opacity: 0.08;
+  transform: scale(1);
+  animation: backgroundPulseGlow calc(var(--background-pulse-duration) * 1ms) ease-in-out infinite;
+}
+
+@keyframes backgroundPulseGlow {
+  0% {
+    opacity: 0.08;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 0.08;
+    transform: scale(1);
+  }
 }
 
 * {
@@ -91,6 +157,13 @@ a {
   gap: 2rem;
 }
 
+.app__header-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
 @media (max-width: 860px) {
   .app__header {
     flex-direction: column;
@@ -101,6 +174,10 @@ a {
   .app__header > * {
     width: 100%;
   }
+
+  .app__header-controls {
+    align-items: stretch;
+  }
 }
 
 .app__header h1 {
@@ -110,6 +187,56 @@ a {
 
 .app__header .muted {
   max-width: 520px;
+}
+
+.background-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.background-toggle__buttons {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 25, 0.55);
+  box-shadow: 0 16px 30px rgba(4, 8, 20, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+.background-toggle__button {
+  background: transparent;
+  border: none;
+  color: rgba(244, 245, 247, 0.72);
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.background-toggle__button:hover {
+  color: #f4f5f7;
+  background: rgba(119, 153, 255, 0.18);
+}
+
+.background-toggle__button.is-active {
+  color: #f4f5f7;
+  background: rgba(119, 153, 255, 0.28);
+  box-shadow: 0 14px 32px rgba(5, 9, 18, 0.45);
+}
+
+.background-toggle__label {
+  color: rgba(244, 245, 247, 0.65);
+}
+
+@media (max-width: 860px) {
+  .background-toggle {
+    align-items: flex-start;
+  }
 }
 
 .label {
