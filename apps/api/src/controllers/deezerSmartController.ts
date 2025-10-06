@@ -54,6 +54,7 @@ export async function getSmartRelated(req: Request, res: Response) {
       query,
       strategy: result.strategy,
       items: result.items,
+      seeds: result.seeds,
       cache: { hit: result.cacheHit },
       tookMs
     });

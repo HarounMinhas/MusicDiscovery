@@ -65,6 +65,7 @@ describe('relatedByBandOrMembers', () => {
 
   expect(result.strategy).toBe('deezer-related');
   expect(result.items.map((item) => item.name)).toEqual(['Thom Yorke', 'Atoms for Peace']);
+  expect(result.seeds).toEqual(['Radiohead']);
   expect(result.cacheHit).toBe(false);
   });
 
@@ -108,6 +109,7 @@ describe('relatedByBandOrMembers', () => {
   expect(result.strategy).toBe('fallback-members-aggregation');
   expect(result.items.length).toBeGreaterThan(0);
   expect(result.items[0].name).toMatch(/Related/);
+  expect(result.seeds).toEqual(['Damon Albarn', 'Graham Coxon']);
   });
 
   it('ranks aggregated artists by frequency and popularity', async () => {
@@ -152,6 +154,7 @@ describe('relatedByBandOrMembers', () => {
   expect(result.items[0].name).toBe('Queen');
   expect(result.items.map((item) => item.name)).toContain('Foo Fighters');
   expect(result.items.map((item) => item.name)).toContain('Coldplay');
+  expect(result.seeds).toEqual(['Matt Bellamy', 'Dominic Howard']);
   });
 
   it('throws NOT_FOUND when fallback is disabled and no Deezer match exists', async () => {
@@ -198,6 +201,7 @@ describe('relatedByBandOrMembers', () => {
 
   expect(result.items.length).toBe(1);
   expect(result.items[0].name).toBe('Result');
+  expect(result.seeds).toEqual(['Neil Halstead', 'Rachel Goswell']);
   });
 
   it('respects the configured max member limit', async () => {
@@ -232,5 +236,6 @@ describe('relatedByBandOrMembers', () => {
   const result = await relatedByBandOrMembers('Paramore', 5, { allowFallback: true });
 
   expect(result.items.map((item) => item.name)).toEqual(['Candidate 15']);
+  expect(result.seeds).toEqual(['Hayley Williams']);
   });
 });
