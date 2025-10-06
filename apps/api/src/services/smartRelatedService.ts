@@ -14,6 +14,7 @@ export type SmartRelatedStrategy = 'deezer-related' | 'fallback-members-aggregat
 export interface SmartRelatedResult {
   strategy: SmartRelatedStrategy;
   items: DeezerArtist[];
+  seeds: string[];
   cacheHit: boolean;
 }
 
@@ -36,6 +37,7 @@ export async function relatedByBandOrMembers(
     return {
       strategy: 'deezer-related',
       items: related.artists.slice(0, normalizedLimit),
+      seeds: [bandName],
       cacheHit
     };
   }
@@ -134,6 +136,7 @@ export async function relatedByBandOrMembers(
   return {
     strategy: 'fallback-members-aggregation',
     items: sorted,
+    seeds: limitedMembers,
     cacheHit
   };
 }

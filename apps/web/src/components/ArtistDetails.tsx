@@ -168,7 +168,11 @@ export default function ArtistDetails({
           <section>
             <h3>Gerelateerde artiesten</h3>
             {displayRelated.length === 0 ? (
-              <p className="muted">Geen gerelateerde artiesten gevonden.</p>
+              <p className="muted">
+                Geen gerelateerde artiesten gevonden. Dit komt zelden voor maar is belangrijk. Stuur de
+                naam van de artiest waar u naar zocht naar{' '}
+                <a href="mailto:myemail@gmail.com">myemail@gmail.com</a>.
+              </p>
             ) : (
               <ul className="related-list">
                 {displayRelated.map((item) => (
