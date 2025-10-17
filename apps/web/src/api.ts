@@ -2,18 +2,19 @@ import type { Artist, ProviderId, ProviderMetadata, SmartRelatedResponse, Track 
 import type { ArtistDetailsPayload } from './cache/artistCache';
 import { getSelectedProvider } from './providerSelection';
 
-const baseUrl = (import.meta.env.VITE_API_BASE ?? 'http://localhost:8080/api').replace(/\/$/, '');
+const apiPrefix = (import.meta.env.VITE_API_PREFIX ?? '/api').replace(/\/$/, '');
 
 async function request<T>(
   path: string,
   options: { includeProvider?: boolean; provider?: ProviderId } = {}
 ): Promise<T> {
-  const url = new URL(`${baseUrl}${path}`);
+  const url = new URL(path, 'http://placeholder.local');
   if (options.includeProvider !== false) {
     const provider = options.provider ?? getSelectedProvider();
     url.searchParams.set('provider', provider);
   }
-  const res = await fetch(url.toString());
+  const pathname = `${url.pathname}${url.search}`;
+  const res = await fetch(`${apiPrefix}${pathname}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `Request failed: ${res.status}`);

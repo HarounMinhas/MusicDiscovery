@@ -46,7 +46,7 @@ This project is designed to be "Codex-ready". Follow the prompts below when impl
 
 5. **Playwright tests (tokenless)**
 
-   - Configure `VITE_API_BASE` to point at the local API.
+   - Configure `VITE_API_PREFIX` to match the API prefix handled by the dev proxy.
    - Cover search → related artists → preview playback.
 
 ## Operating modes
