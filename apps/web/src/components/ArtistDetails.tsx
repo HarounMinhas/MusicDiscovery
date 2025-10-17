@@ -113,8 +113,20 @@ export default function ArtistDetails({
                               {formatDuration(track.durationMs)}
                             </span>
                             {canPreview ? (
-                              <span className="track-list__icon" aria-hidden="true">
-                                {isActive ? '■' : '▶'}
+                              <span className="track-list__indicator" aria-hidden="true">
+                                <span
+                                  className={`track-list__icon${isActive ? ' track-list__icon--hidden' : ''}`}
+                                >
+                                  {isActive ? '■' : '▶'}
+                                </span>
+                                <span
+                                  className={`track-list__visualizer${isActive ? ' is-active' : ''}`}
+                                >
+                                  <span className="track-list__visualizer-bar" />
+                                  <span className="track-list__visualizer-bar" />
+                                  <span className="track-list__visualizer-bar" />
+                                  <span className="track-list__visualizer-bar" />
+                                </span>
                               </span>
                             ) : null}
                           </div>
