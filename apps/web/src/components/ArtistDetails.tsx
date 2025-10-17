@@ -90,6 +90,12 @@ export default function ArtistDetails({
                   {displayTopTracks.map((track) => {
                     const isActive = activeTrackId === track.id;
                     const canPreview = Boolean(track.previewUrl);
+                    const playIconClass = isActive
+                      ? 'track-list__icon track-list__icon--play track-list__icon--hidden'
+                      : 'track-list__icon track-list__icon--play';
+                    const stopIconClass = isActive
+                      ? 'track-list__icon track-list__icon--stop'
+                      : 'track-list__icon track-list__icon--stop track-list__icon--hidden';
                     return (
                       <li key={track.id}>
                         <button
@@ -113,8 +119,21 @@ export default function ArtistDetails({
                               {formatDuration(track.durationMs)}
                             </span>
                             {canPreview ? (
-                              <span className="track-list__icon" aria-hidden="true">
-                                {isActive ? '■' : '▶'}
+                              <span className="track-list__indicator" aria-hidden="true">
+                                <span className={playIconClass}>
+                                  ▶
+                                </span>
+                                <span className={stopIconClass}>
+                                  ■
+                                </span>
+                                <span
+                                  className={`track-list__visualizer${isActive ? ' is-active' : ''}`}
+                                >
+                                  <span className="track-list__visualizer-bar" />
+                                  <span className="track-list__visualizer-bar" />
+                                  <span className="track-list__visualizer-bar" />
+                                  <span className="track-list__visualizer-bar" />
+                                </span>
                               </span>
                             ) : null}
                           </div>
