@@ -611,7 +611,16 @@ a {
 }
 
 .track-list__icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
   transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1;
+}
+
+.track-list__icon--stop {
+  font-size: 0.7rem;
 }
 
 .track-list__icon--hidden {
@@ -629,6 +638,7 @@ a {
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 0;
 }
 
 .track-list__visualizer.is-active {
