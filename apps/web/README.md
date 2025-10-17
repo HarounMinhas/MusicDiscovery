@@ -9,4 +9,4 @@ Minimal Vite + React shell that consumes the MusicDiscovery API. The search box 
 
 ## Environment
 
-Configure `VITE_API_BASE` to point to the API instance. An example file is available in [`.env.example`](./.env.example).
+Configure `VITE_API_PREFIX` to match the API prefix you want proxied by Vite. An example file is available in [`.env.example`](./.env.example).
