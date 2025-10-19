@@ -46,6 +46,9 @@ function hzToIndex(hz: number, sampleRate: number, fftSize: number) {
   return Math.min(Math.max(Math.round((hz / nyquist) * (fftSize / 2)), 0), fftSize / 2 - 1);
 }
 
+const mediaSourceCache = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
+let sharedAudioContext: AudioContext | null = null;
+
 const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
   audioRef,
   width = '100%',
@@ -78,12 +81,15 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
         return null;
       }
 
-      if (!audioCtxRef.current) {
-        const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        audioCtxRef.current = AudioContextCtor ? new AudioContextCtor() : null;
+      if (!sharedAudioContext) {
+        const AudioContextCtor =
+          window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        sharedAudioContext = AudioContextCtor ? new AudioContextCtor() : null;
       }
 
-      const ctx = audioCtxRef.current;
+      audioCtxRef.current = sharedAudioContext;
+
+      const ctx = sharedAudioContext;
       if (!ctx) {
         return null;
       }
@@ -97,7 +103,12 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
       }
 
       if (!sourceRef.current) {
-        sourceRef.current = ctx.createMediaElementSource(audioEl);
+        let source = mediaSourceCache.get(audioEl);
+        if (!source) {
+          source = ctx.createMediaElementSource(audioEl);
+          mediaSourceCache.set(audioEl, source);
+        }
+        sourceRef.current = source;
       }
       if (!analyserRef.current) {
         analyserRef.current = ctx.createAnalyser();
@@ -225,8 +236,18 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
       audioEl.removeEventListener('play', handlePlay);
       audioEl.removeEventListener('pause', handlePause);
       audioEl.removeEventListener('ended', handlePause);
-      analyserRef.current?.disconnect();
-      sourceRef.current?.disconnect();
+      const analyser = analyserRef.current;
+      const source = sourceRef.current;
+      if (analyser) {
+        analyser.disconnect();
+      }
+      if (source && analyser) {
+        try {
+          source.disconnect(analyser);
+        } catch (disconnectError) {
+          console.warn('Kon bron niet loskoppelen van analyser', disconnectError);
+        }
+      }
       analyserRef.current = null;
       sourceRef.current = null;
       dataRef.current = null;
