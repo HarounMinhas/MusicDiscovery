@@ -13,10 +13,10 @@ interface FrequencyVisualizerProps {
 }
 
 const DEFAULT_BANDS: Array<[number, number]> = [
-  [100, 800],
-  [800, 2000],
-  [2000, 4000],
-  [4000, 7000],
+  [100, 799],
+  [800, 1999],
+  [2000, 3999],
+  [4000, 6999],
   [7000, 10000]
 ];
 

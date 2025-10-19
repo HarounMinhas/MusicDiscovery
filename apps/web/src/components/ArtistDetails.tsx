@@ -126,9 +126,9 @@ export default function ArtistDetails({
                             {isActive ? (
                               <FrequencyVisualizer
                                 audioRef={previewAudioRef}
-                                barsPerBand={32}
-                                gap={0}
-                                fftSize={512}
+                                barsPerBand={6}
+                                gap={1}
+                                fftSize={1024}
                                 verticalPaddingRatio={0.00001}
                                 smoothing={0.86}
                                 barColor="rgba(244, 247, 255, 0.05)"
