@@ -13,11 +13,11 @@ interface FrequencyVisualizerProps {
 }
 
 const DEFAULT_BANDS: Array<[number, number]> = [
-  [20, 150],
-  [150, 400],
-  [400, 2000],
-  [2000, 5000],
-  [5000, 20000]
+  [100, 800],
+  [800, 2000],
+  [2000, 4000],
+  [4000, 7000],
+  [7000, 10000]
 ];
 
 type FrequencyDataArray = Uint8Array<ArrayBuffer>;
@@ -53,7 +53,7 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
   audioRef,
   width = '100%',
   height = '100%',
-  barsPerBand = 8,
+  barsPerBand = 7,
   fftSize = 2048,
   barColor = 'rgba(244, 245, 247, 0.85)',
   gap = 3,
