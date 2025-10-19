@@ -498,6 +498,8 @@ a {
   font: inherit;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .track-list__button:hover,
@@ -534,12 +536,16 @@ a {
   flex-direction: column;
   gap: 0.25rem;
   text-align: left;
+  position: relative;
+  z-index: 1;
 }
 
 .track-list__actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  position: relative;
+  z-index: 1;
 }
 
 .track-list__duration {
@@ -561,7 +567,6 @@ a {
   transform: translateY(4px);
   transition: opacity 0.18s ease, transform 0.2s ease, background 0.2s ease;
   position: relative;
-  overflow: hidden;
 }
 
 .track-list__button:hover .track-list__indicator,
@@ -630,55 +635,50 @@ a {
 
 .track-list__visualizer {
   position: absolute;
-  inset: 6px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 3px;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  transform: scale(0.985);
+  transition: opacity 0.28s ease, transform 0.32s ease;
   z-index: 0;
+}
+
+.track-list__visualizer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(119, 153, 255, 0.18), rgba(76, 45, 230, 0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.track-list__visualizer-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(176, 204, 255, 0.15), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(255, 182, 219, 0.12), transparent 60%),
+    rgba(32, 27, 55, 0.25);
+  mix-blend-mode: screen;
+}
+
+.track-list__visualizer-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
 }
 
 .track-list__visualizer.is-active {
   opacity: 1;
-  transform: translateY(0);
+  transform: scale(1);
 }
 
-.track-list__visualizer-bar {
-  flex: 1;
-  min-width: 3px;
-  border-radius: 999px;
-  background: rgba(244, 245, 247, 0.95);
-  transform-origin: center bottom;
-  animation: trackVisualizerBar 0.8s ease-in-out infinite;
-}
-
-.track-list__visualizer-bar:nth-child(1) {
-  animation-delay: 0ms;
-}
-
-.track-list__visualizer-bar:nth-child(2) {
-  animation-delay: 120ms;
-}
-
-.track-list__visualizer-bar:nth-child(3) {
-  animation-delay: 240ms;
-}
-
-.track-list__visualizer-bar:nth-child(4) {
-  animation-delay: 360ms;
-}
-
-@keyframes trackVisualizerBar {
-  0%,
-  100% {
-    transform: scaleY(0.35);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+.track-list__visualizer.is-active::before {
+  opacity: 1;
 }
 
 .track-list strong {

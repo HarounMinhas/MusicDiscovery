@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
 import LoadingIndicator from './LoadingIndicator';
+import FrequencyVisualizer from './FrequencyVisualizer';
 import { useTrackPreview } from '../hooks/useTrackPreview';
 
 interface ArtistDetailsProps {
@@ -25,7 +26,14 @@ export default function ArtistDetails({
   onOpenRelated
 }: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
-  const { activeTrackId, error: previewError, failure: previewFailure, togglePreview, stopPlayback } = useTrackPreview(
+  const {
+    activeTrackId,
+    audioRef: previewAudioRef,
+    error: previewError,
+    failure: previewFailure,
+    togglePreview,
+    stopPlayback
+  } = useTrackPreview(
     previewEnabled,
     onPreviewError
   );
@@ -89,7 +97,7 @@ export default function ArtistDetails({
                 <ol className="track-list track-list--interactive">
                   {displayTopTracks.map((track) => {
                     const isActive = activeTrackId === track.id;
-                    const canPreview = Boolean(track.previewUrl);
+                    const canPreview = Boolean(track.previewProxyUrl ?? track.previewUrl);
                     const playIconClass = isActive
                       ? 'track-list__icon track-list__icon--play track-list__icon--hidden'
                       : 'track-list__icon track-list__icon--play';
@@ -110,6 +118,23 @@ export default function ArtistDetails({
                               : `Speel preview van ${track.name}`
                           }
                         >
+                          <span
+                            className={`track-list__visualizer${isActive ? ' is-active' : ''}`}
+                            aria-hidden="true"
+                          >
+                            <span className="track-list__visualizer-overlay" />
+                            {isActive ? (
+                              <FrequencyVisualizer
+                                audioRef={previewAudioRef}
+                                barsPerBand={7}
+                                gap={4}
+                                fftSize={1024}
+                                verticalPaddingRatio={0.2}
+                                smoothing={0.86}
+                                barColor="rgba(244, 247, 255, 0.9)"
+                              />
+                            ) : null}
+                          </span>
                           <div className="track-list__meta">
                             <strong>{track.name}</strong>
                             <span className="muted">{formatArtists(track)}</span>
@@ -125,14 +150,6 @@ export default function ArtistDetails({
                                 </span>
                                 <span className={stopIconClass}>
                                   ■
-                                </span>
-                                <span
-                                  className={`track-list__visualizer${isActive ? ' is-active' : ''}`}
-                                >
-                                  <span className="track-list__visualizer-bar" />
-                                  <span className="track-list__visualizer-bar" />
-                                  <span className="track-list__visualizer-bar" />
-                                  <span className="track-list__visualizer-bar" />
                                 </span>
                               </span>
                             ) : null}
