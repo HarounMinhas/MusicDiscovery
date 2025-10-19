@@ -14,6 +14,7 @@ export const TrackSchema = z.object({
   id: z.string(),
   name: z.string(),
   previewUrl: z.string().url().optional(),
+  previewProxyUrl: z.string().url().optional(),
   durationMs: z.number(),
   artists: z.array(z.object({ id: z.string(), name: z.string() }))
 });

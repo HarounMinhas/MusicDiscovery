@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MutableRefObject } from 'react';
 import type { Track } from '@musicdiscovery/shared';
 import { getTrack } from '../api';
 
@@ -28,6 +29,7 @@ interface UseTrackPreviewResult {
   failure: PreviewFailure | null;
   togglePreview: (track: Track) => void;
   stopPlayback: () => void;
+  audioRef: MutableRefObject<HTMLAudioElement | null>;
 }
 
 export function useTrackPreview(
@@ -121,11 +123,12 @@ export function useTrackPreview(
   // We voeren daarom een lichte CORS-check uit zodat we een duidelijke melding kunnen tonen
   // in plaats van een generieke HTMLMediaElement-fout.
   const validatePreview = useCallback(async (track: Track): Promise<PreviewValidationResult> => {
-    if (!track.previewUrl) {
+    const previewSource = track.previewProxyUrl ?? track.previewUrl;
+    if (!previewSource) {
       return { ok: false, details: { reason: 'missing' } };
     }
 
-    const url = track.previewUrl;
+    const url = previewSource;
     const tryRequest = async (method: 'HEAD' | 'GET'): Promise<PreviewValidationResult> => {
       const controller = new AbortController();
       const options: RequestInit = {
@@ -188,7 +191,8 @@ export function useTrackPreview(
 
   const playPreparedTrack = useCallback(
     async (track: Track, allowRefresh: boolean, token: number) => {
-      if (!track.previewUrl) {
+      const previewSource = track.previewProxyUrl ?? track.previewUrl;
+      if (!previewSource) {
         const details: PreviewFailureDetails = { reason: 'missing' };
         const message = buildErrorMessage(track, details);
         setError(message);
@@ -233,9 +237,11 @@ export function useTrackPreview(
             const merged = {
               ...track,
               ...refreshed,
-              previewUrl: refreshed.previewUrl ?? track.previewUrl
+              previewUrl: refreshed.previewUrl ?? track.previewUrl,
+              previewProxyUrl: refreshed.previewProxyUrl ?? track.previewProxyUrl
             };
-            if (merged.previewUrl) {
+            const mergedSource = merged.previewProxyUrl ?? merged.previewUrl;
+            if (mergedSource) {
               await playPreparedTrack(merged, false, token);
               return;
             }
@@ -264,7 +270,7 @@ export function useTrackPreview(
       audio.addEventListener('ended', handleEnded, { once: true });
       audio.addEventListener('error', handleError, { once: true });
       setActiveTrackId(track.id);
-      audio.src = track.previewUrl;
+      audio.src = previewSource;
 
       try {
         await audio.play();
@@ -290,7 +296,8 @@ export function useTrackPreview(
         preparedTrack = {
           ...track,
           ...refreshed,
-          previewUrl: refreshed.previewUrl ?? track.previewUrl
+          previewUrl: refreshed.previewUrl ?? track.previewUrl,
+          previewProxyUrl: refreshed.previewProxyUrl ?? track.previewProxyUrl
         };
       } catch (fetchError) {
         console.warn('Kon trackgegevens niet ophalen voor preview', fetchError);
@@ -337,5 +344,5 @@ export function useTrackPreview(
     }
   }, [isEnabled, stopPlayback]);
 
-  return { activeTrackId, error, failure, togglePreview, stopPlayback };
+  return { activeTrackId, error, failure, togglePreview, stopPlayback, audioRef };
 }
