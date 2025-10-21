@@ -11,9 +11,11 @@ import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useArtistDetails } from './hooks/useArtistDetails';
+import { useScrollPreserver } from './hooks/useScrollPreserver';
 
 export default function App(): JSX.Element {
   const [provider] = useState(() => getSelectedProvider());
+  const preserveScroll = useScrollPreserver();
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem('background-mode');
@@ -75,30 +77,9 @@ export default function App(): JSX.Element {
     window.localStorage.setItem('background-mode', backgroundMode);
   }, [backgroundMode]);
 
-  const runWithPreservedScroll = useCallback((operation: () => void) => {
-    if (typeof window === 'undefined') {
-      operation();
-      return;
-    }
-
-    const { scrollX, scrollY } = window;
-    operation();
-
-    const restoreIfNeeded = () => {
-      if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
-        window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
-      }
-    };
-
-    requestAnimationFrame(() => {
-      restoreIfNeeded();
-      requestAnimationFrame(restoreIfNeeded);
-    });
-  }, []);
-
   const openOrFocusTab = useCallback(
     (artist: Artist) => {
-      runWithPreservedScroll(() => {
+      preserveScroll(() => {
         const now = Date.now();
         setActiveTabId(artist.id);
         setOpenTabs((tabs) => {
@@ -129,24 +110,24 @@ export default function App(): JSX.Element {
         });
       });
     },
-    [runWithPreservedScroll]
+    [preserveScroll]
   );
 
   const focusTab = useCallback(
     (id: string) => {
-      runWithPreservedScroll(() => {
+      preserveScroll(() => {
         setActiveTabId(id);
         setOpenTabs((tabs) =>
           tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
         );
       });
     },
-    [runWithPreservedScroll]
+    [preserveScroll]
   );
 
   const closeTab = useCallback(
     (id: string) => {
-      runWithPreservedScroll(() => {
+      preserveScroll(() => {
         setOpenTabs((tabs) => {
           const remaining = tabs.filter((tab) => tab.id !== id);
           setActiveTabId((current) => {
@@ -165,7 +146,7 @@ export default function App(): JSX.Element {
         });
       });
     },
-    [runWithPreservedScroll]
+    [preserveScroll]
   );
 
   useEffect(() => {

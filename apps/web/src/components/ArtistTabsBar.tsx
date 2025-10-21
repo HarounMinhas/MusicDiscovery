@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
+import { useScrollPreserver } from '../hooks/useScrollPreserver';
 
 export interface ArtistTabItem {
   id: string;
@@ -13,10 +14,34 @@ interface ArtistTabsBarProps {
   onClose: (id: string) => void;
 }
 
+function focusWithoutScrolling(node: HTMLElement) {
+  if (!node) {
+    return;
+  }
+
+  if (typeof window === 'undefined') {
+    node.focus();
+    return;
+  }
+
+  const { scrollX, scrollY } = window;
+
+  try {
+    node.focus({ preventScroll: true } as FocusOptions);
+  } catch {
+    node.focus();
+  }
+
+  if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+    window.scrollTo(scrollX, scrollY);
+  }
+}
+
 export default function ArtistTabsBar({ tabs, activeId, onSelect, onClose }: ArtistTabsBarProps) {
   const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const preserveScroll = useScrollPreserver();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!activeId) {
       return;
     }
@@ -26,28 +51,30 @@ export default function ArtistTabsBar({ tabs, activeId, onSelect, onClose }: Art
       return;
     }
 
-    node.focus({ preventScroll: true });
+    preserveScroll(() => {
+      focusWithoutScrolling(node);
 
-    const parent = node.parentElement;
-    if (!parent) {
-      return;
-    }
+      const parent = node.parentElement;
+      if (!parent) {
+        return;
+      }
 
-    const parentLeft = parent.scrollLeft;
-    const parentRight = parentLeft + parent.clientWidth;
-    const nodeLeft = node.offsetLeft;
-    const nodeRight = nodeLeft + node.clientWidth;
+      const parentLeft = parent.scrollLeft;
+      const parentRight = parentLeft + parent.clientWidth;
+      const nodeLeft = node.offsetLeft;
+      const nodeRight = nodeLeft + node.clientWidth;
 
-    if (nodeLeft >= parentLeft && nodeRight <= parentRight) {
-      return;
-    }
+      if (nodeLeft >= parentLeft && nodeRight <= parentRight) {
+        return;
+      }
 
-    const target = nodeLeft - parent.clientWidth / 2 + node.clientWidth / 2;
-    parent.scrollTo({
-      left: Math.max(0, target),
-      behavior: 'smooth'
+      const target = nodeLeft - parent.clientWidth / 2 + node.clientWidth / 2;
+      parent.scrollTo({
+        left: Math.max(0, target),
+        behavior: 'smooth'
+      });
     });
-  }, [activeId]);
+  }, [activeId, preserveScroll]);
 
   if (tabs.length === 0) {
     return null;
