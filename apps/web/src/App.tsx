@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Artist } from '@musicdiscovery/shared';
+import type { Artist, ProviderId } from '@musicdiscovery/shared';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ProviderSwitcher from './components/ProviderSwitcher';
 import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
@@ -8,13 +9,15 @@ import ArtistTabsBar, { type ArtistTabItem } from './components/ArtistTabsBar';
 import BackgroundToggle, { type BackgroundMode } from './components/BackgroundToggle';
 import BackgroundPulse from './components/BackgroundPulse';
 import './styles.css';
-import { getSelectedProvider } from './providerSelection';
+import { getSelectedProvider, setSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useArtistDetails } from './hooks/useArtistDetails';
 import { useScrollPreserver } from './hooks/useScrollPreserver';
 
 export default function App(): JSX.Element {
-  const [provider] = useState(() => getSelectedProvider());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [provider, setProvider] = useState<ProviderId>(() => getSelectedProvider());
   const preserveScroll = useScrollPreserver();
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     if (typeof window !== 'undefined') {
@@ -55,37 +58,35 @@ export default function App(): JSX.Element {
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const lastHistoryArtistIdRef = useRef<string | null>(null);
+  const currentArtistId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('artistId');
+  }, [location.search]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const url = new URL(window.location.href);
-    lastHistoryArtistIdRef.current = url.searchParams.get('artistId');
-  }, []);
+    lastHistoryArtistIdRef.current = currentArtistId;
+  }, [currentArtistId]);
 
   const updateUrlForArtist = useCallback(
     (artistId: string | null) => {
-      if (lastHistoryArtistIdRef.current === artistId) {
+      if (lastHistoryArtistIdRef.current === artistId && currentArtistId === artistId) {
         return;
       }
 
-      if (typeof window === 'undefined') {
-        lastHistoryArtistIdRef.current = artistId;
-        return;
-      }
-
-      const url = new URL(window.location.href);
+      const params = new URLSearchParams(location.search);
       if (artistId) {
-        url.searchParams.set('artistId', artistId);
+        params.set('artistId', artistId);
       } else {
-        url.searchParams.delete('artistId');
+        params.delete('artistId');
       }
 
-      window.history.pushState({}, '', url);
+      const search = params.toString();
+      const hash = location.hash || '';
+      const nextUrl = `${location.pathname}${search ? `?${search}` : ''}${hash}`;
+      navigate(nextUrl, { preventScrollReset: true });
       lastHistoryArtistIdRef.current = artistId;
     },
-    []
+    [currentArtistId, location.hash, location.pathname, location.search, navigate]
   );
 
   useEffect(() => {
@@ -109,6 +110,24 @@ export default function App(): JSX.Element {
     }
     window.localStorage.setItem('background-mode', backgroundMode);
   }, [backgroundMode]);
+
+  const handleProviderChange = useCallback(
+    (next: ProviderId) => {
+      setSelectedProvider(next);
+      if (next === provider) {
+        return;
+      }
+
+      preserveScroll(() => {
+        setProvider(next);
+        setOpenTabs([]);
+        setActiveTabId(null);
+        lastHistoryArtistIdRef.current = null;
+        updateUrlForArtist(null);
+      });
+    },
+    [preserveScroll, provider, updateUrlForArtist]
+  );
 
   const openOrFocusTab = useCallback(
     (artist: Artist) => {
@@ -200,20 +219,50 @@ export default function App(): JSX.Element {
     }
   }, [confirmedArtist, openOrFocusTab]);
 
+  const {
+    status: detailStatus,
+    error: detailError,
+    artist: detailArtist,
+    topTracks,
+    relatedArtists
+  } = useArtistDetails(activeTabId, provider);
+
   const activeTab = useMemo(
     () => (activeTabId ? openTabs.find((tab) => tab.id === activeTabId) ?? null : null),
     [activeTabId, openTabs]
   );
 
-  const selectedArtist = activeTab?.artist ?? null;
+  useEffect(() => {
+    if (!detailArtist) {
+      return;
+    }
+
+    setOpenTabs((tabs) => {
+      let mutated = false;
+      const next = tabs.map((tab) => {
+        if (tab.id !== detailArtist.id) {
+          return tab;
+        }
+        if (tab.artist === detailArtist) {
+          return tab;
+        }
+        mutated = true;
+        return {
+          ...tab,
+          name: detailArtist.name,
+          imageUrl: detailArtist.imageUrl,
+          artist: detailArtist
+        };
+      });
+      return mutated ? next : tabs;
+    });
+  }, [detailArtist]);
+
+  const selectedArtist = detailArtist ?? activeTab?.artist ?? null;
 
   const tabItems = useMemo<ArtistTabItem[]>(
     () => openTabs.map(({ id, name, imageUrl }) => ({ id, name, imageUrl })),
     [openTabs]
-  );
-
-  const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
-    activeTabId
   );
 
   const pushToast = useCallback((message: string) => {
@@ -290,7 +339,7 @@ export default function App(): JSX.Element {
         </div>
         <div className="app__header-controls">
           <BackgroundToggle value={backgroundMode} onChange={setBackgroundMode} />
-          <ProviderSwitcher />
+          <ProviderSwitcher value={provider} onChange={handleProviderChange} />
         </div>
       </header>
 
