@@ -56,6 +56,7 @@ describe('useArtistDetails', () => {
     const { result } = renderHook(() => useArtistDetails('artist-1', 'spotify'));
 
     expect(result.current.status).toBe('success');
+    expect(result.current.artist).toEqual(cached.artist);
     expect(result.current.topTracks).toEqual(cached.topTracks);
     expect(result.current.relatedArtists).toEqual(cached.relatedArtists);
     expect(fetchArtistDetailsMock).not.toHaveBeenCalled();
@@ -88,6 +89,7 @@ describe('useArtistDetails', () => {
     });
 
     expect(result.current.status).toBe('success');
+    expect(result.current.artist).toEqual(payload.artist);
     expect(result.current.topTracks).toEqual(payload.topTracks);
   });
 
@@ -104,6 +106,7 @@ describe('useArtistDetails', () => {
     const { result } = renderHook(() => useArtistDetails('artist-3', 'spotify'));
 
     expect(result.current.status).toBe('success');
+    expect(result.current.artist).toEqual(stale.artist);
     expect(result.current.topTracks).toEqual(stale.topTracks);
 
     await waitFor(() => {
@@ -111,6 +114,7 @@ describe('useArtistDetails', () => {
     });
 
     await waitFor(() => {
+      expect(result.current.artist).toEqual(fresh.artist);
       expect(result.current.topTracks).toEqual(fresh.topTracks);
     });
 

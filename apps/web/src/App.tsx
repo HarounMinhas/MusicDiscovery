@@ -224,17 +224,46 @@ export default function App(): JSX.Element {
     [activeTabId, openTabs]
   );
 
-  const selectedArtist = activeTab?.artist ?? null;
+  useEffect(() => {
+    if (!detailArtist) {
+      return;
+    }
+
+    setOpenTabs((tabs) => {
+      let mutated = false;
+      const next = tabs.map((tab) => {
+        if (tab.id !== detailArtist.id) {
+          return tab;
+        }
+        if (tab.artist === detailArtist) {
+          return tab;
+        }
+        mutated = true;
+        return {
+          ...tab,
+          name: detailArtist.name,
+          imageUrl: detailArtist.imageUrl,
+          artist: detailArtist
+        };
+      });
+      return mutated ? next : tabs;
+    });
+  }, [detailArtist]);
+
+  const selectedArtist = detailArtist ?? activeTab?.artist ?? null;
 
   const tabItems = useMemo<ArtistTabItem[]>(
     () => openTabs.map(({ id, name, imageUrl }) => ({ id, name, imageUrl })),
     [openTabs]
   );
 
-  const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
-    activeTabId,
-    provider
-  );
+  const {
+    status: detailStatus,
+    error: detailError,
+    artist: detailArtist,
+    topTracks,
+    relatedArtists
+  } = useArtistDetails(activeTabId, provider);
 
   const pushToast = useCallback((message: string) => {
     const text = message.trim();

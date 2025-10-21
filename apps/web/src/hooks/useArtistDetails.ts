@@ -19,6 +19,7 @@ interface UseArtistDetailsOptions {
 interface UseArtistDetailsResult {
   status: AsyncStatus;
   error: string | null;
+  artist: Artist | null;
   topTracks: Track[];
   relatedArtists: Artist[];
 }
@@ -54,6 +55,7 @@ export function useArtistDetails(
 
   const [status, setStatus] = useState<AsyncStatus>(initialState.status);
   const [error, setError] = useState<string | null>(null);
+  const [artist, setArtist] = useState<Artist | null>(initialState.payload?.artist ?? null);
   const [topTracks, setTopTracks] = useState<Track[]>(initialState.payload?.topTracks ?? []);
   const [relatedArtists, setRelatedArtists] = useState<Artist[]>(
     initialState.payload?.relatedArtists ?? []
@@ -62,6 +64,7 @@ export function useArtistDetails(
   useEffect(() => {
     setStatus(initialState.status);
     setError(null);
+    setArtist(initialState.payload?.artist ?? null);
     setTopTracks(initialState.payload?.topTracks ?? []);
     setRelatedArtists(initialState.payload?.relatedArtists ?? []);
   }, [initialState]);
@@ -70,6 +73,7 @@ export function useArtistDetails(
     if (!artistId) {
       setStatus('idle');
       setError(null);
+      setArtist(null);
       setTopTracks([]);
       setRelatedArtists([]);
       return;
@@ -80,6 +84,7 @@ export function useArtistDetails(
 
     const applyPayload = (payload: ArtistDetailsPayload) => {
       if (cancelled) return;
+      setArtist(payload.artist);
       setTopTracks(payload.topTracks);
       setRelatedArtists(payload.relatedArtists);
       setStatus('success');
@@ -94,6 +99,7 @@ export function useArtistDetails(
       }
       setStatus('error');
       setError(err instanceof Error ? err.message : String(err));
+      setArtist(null);
       setTopTracks([]);
       setRelatedArtists([]);
     };
@@ -131,6 +137,7 @@ export function useArtistDetails(
 
     setStatus('loading');
     setError(null);
+    setArtist(null);
     runFetch(false);
 
     return () => {
@@ -138,5 +145,5 @@ export function useArtistDetails(
     };
   }, [artistId, provider, topTrackLimit, relatedLimit]);
 
-  return { status, error, topTracks, relatedArtists };
+  return { status, error, artist, topTracks, relatedArtists };
 }
