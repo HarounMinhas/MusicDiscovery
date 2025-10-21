@@ -11,9 +11,11 @@ import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useArtistDetails } from './hooks/useArtistDetails';
+import { useScrollPreserver } from './hooks/useScrollPreserver';
 
 export default function App(): JSX.Element {
   const [provider] = useState(() => getSelectedProvider());
+  const preserveScroll = useScrollPreserver();
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem('background-mode');
@@ -75,63 +77,77 @@ export default function App(): JSX.Element {
     window.localStorage.setItem('background-mode', backgroundMode);
   }, [backgroundMode]);
 
-  const openOrFocusTab = useCallback((artist: Artist) => {
-    setOpenTabs((tabs) => {
-      const now = Date.now();
-      const existing = tabs.find((tab) => tab.id === artist.id);
-      if (existing) {
+  const openOrFocusTab = useCallback(
+    (artist: Artist) => {
+      preserveScroll(() => {
+        const now = Date.now();
         setActiveTabId(artist.id);
-        return tabs.map((tab) =>
-          tab.id === artist.id
-            ? {
-                ...tab,
-                name: artist.name,
-                imageUrl: artist.imageUrl,
-                artist,
-                lastActivatedAt: now
-              }
-            : tab
-        );
-      }
+        setOpenTabs((tabs) => {
+          const existing = tabs.find((tab) => tab.id === artist.id);
+          if (existing) {
+            return tabs.map((tab) =>
+              tab.id === artist.id
+                ? {
+                    ...tab,
+                    name: artist.name,
+                    imageUrl: artist.imageUrl,
+                    artist,
+                    lastActivatedAt: now
+                  }
+                : tab
+            );
+          }
 
-      const nextTab: OpenTab = {
-        id: artist.id,
-        name: artist.name,
-        imageUrl: artist.imageUrl,
-        artist,
-        openedAt: now,
-        lastActivatedAt: now
-      };
-      setActiveTabId(artist.id);
-      return [...tabs, nextTab];
-    });
-  }, []);
-
-  const focusTab = useCallback((id: string) => {
-    setActiveTabId(id);
-    setOpenTabs((tabs) =>
-      tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
-    );
-  }, []);
-
-  const closeTab = useCallback((id: string) => {
-    setOpenTabs((tabs) => {
-      const remaining = tabs.filter((tab) => tab.id !== id);
-      setActiveTabId((current) => {
-        if (current && current !== id) {
-          return current;
-        }
-        if (remaining.length === 0) {
-          return null;
-        }
-        const next = remaining.reduce((latest, tab) =>
-          tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
-        );
-        return next.id;
+          const nextTab: OpenTab = {
+            id: artist.id,
+            name: artist.name,
+            imageUrl: artist.imageUrl,
+            artist,
+            openedAt: now,
+            lastActivatedAt: now
+          };
+          return [...tabs, nextTab];
+        });
       });
-      return remaining;
-    });
-  }, []);
+    },
+    [preserveScroll]
+  );
+
+  const focusTab = useCallback(
+    (id: string) => {
+      preserveScroll(() => {
+        setActiveTabId(id);
+        setOpenTabs((tabs) =>
+          tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
+        );
+      });
+    },
+    [preserveScroll]
+  );
+
+  const closeTab = useCallback(
+    (id: string) => {
+      preserveScroll(() => {
+        setOpenTabs((tabs) => {
+          const remaining = tabs.filter((tab) => tab.id !== id);
+          setActiveTabId((current) => {
+            if (current && current !== id) {
+              return current;
+            }
+            if (remaining.length === 0) {
+              return null;
+            }
+            const next = remaining.reduce((latest, tab) =>
+              tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
+            );
+            return next.id;
+          });
+          return remaining;
+        });
+      });
+    },
+    [preserveScroll]
+  );
 
   useEffect(() => {
     if (confirmedArtist) {
