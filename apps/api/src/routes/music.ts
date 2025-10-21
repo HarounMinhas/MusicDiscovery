@@ -24,28 +24,13 @@ function parseLimit(value: unknown, fallback = 10, max = 25) {
   return fallback;
 }
 
-function resolveBaseUrl(req: Request) {
-  const host = req.get('host');
-  if (!host) {
-    return null;
-  }
-  const forwarded = req.headers['x-forwarded-proto'];
-  const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-  const proto = forwardedValue?.split(',')[0]?.trim() || req.protocol;
-  return `${proto}://${host}`;
-}
-
-function attachPreviewProxy(track: Track | null, req: Request): Track | null {
+function attachPreviewProxy(track: Track | null): Track | null {
   if (!track || !track.previewUrl) {
-    return track;
-  }
-  const origin = resolveBaseUrl(req);
-  if (!origin) {
     return track;
   }
   return {
     ...track,
-    previewProxyUrl: `${origin}/api/music/tracks/${encodeURIComponent(track.id)}/preview`
+    previewProxyUrl: `/api/music/tracks/${encodeURIComponent(track.id)}/preview`
   };
 }
 
@@ -187,7 +172,7 @@ router.get('/music/artists/:id/top-tracks', async (req, res, next) => {
       1000 * 60 * 5,
       () => provider.getTopTracks(req.params.id, market, limit)
     );
-    const decorated = items.map((track) => attachPreviewProxy(track, req) ?? track);
+    const decorated = items.map((track) => attachPreviewProxy(track) ?? track);
     const parsed = TopTracksResponseSchema.parse({ items: decorated });
     res.json(parsed);
   } catch (error) {
@@ -207,7 +192,7 @@ router.get('/music/tracks/:id', async (req, res, next) => {
       res.status(404).json({ error: { code: 'not_found', message: 'Track not found' } });
       return;
     }
-    const decorated = attachPreviewProxy(track, req) ?? track;
+    const decorated = attachPreviewProxy(track) ?? track;
     res.json(TrackSchema.parse(decorated));
   } catch (error) {
     next(error);
