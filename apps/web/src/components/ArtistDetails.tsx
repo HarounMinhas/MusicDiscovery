@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
 import LoadingIndicator from './LoadingIndicator';
 import FrequencyVisualizer from './FrequencyVisualizer';
+import SimilarArtistsList from './SimilarArtistsList';
 import { useTrackPreview } from '../hooks/useTrackPreview';
 
 interface ArtistDetailsProps {
@@ -210,26 +211,7 @@ export default function ArtistDetails({
                 <a href="mailto:myemail@gmail.com">myemail@gmail.com</a>.
               </p>
             ) : (
-              <ul className="related-list">
-                {displayRelated.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className="related-list__button"
-                      onClick={() => onOpenRelated?.(item)}
-                    >
-                      {item.imageUrl ? (
-                        <img className="related-list__thumb" src={item.imageUrl} alt="" />
-                      ) : (
-                        <div className="related-list__thumb related-list__thumb--placeholder" aria-hidden="true">
-                          {item.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="related-list__label">{item.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <SimilarArtistsList artists={displayRelated} onOpen={onOpenRelated} />
             )}
           </section>
         </div>

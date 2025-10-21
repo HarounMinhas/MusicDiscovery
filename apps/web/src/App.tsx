@@ -54,6 +54,39 @@ export default function App(): JSX.Element {
 
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const lastHistoryArtistIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const url = new URL(window.location.href);
+    lastHistoryArtistIdRef.current = url.searchParams.get('artistId');
+  }, []);
+
+  const updateUrlForArtist = useCallback(
+    (artistId: string | null) => {
+      if (lastHistoryArtistIdRef.current === artistId) {
+        return;
+      }
+
+      if (typeof window === 'undefined') {
+        lastHistoryArtistIdRef.current = artistId;
+        return;
+      }
+
+      const url = new URL(window.location.href);
+      if (artistId) {
+        url.searchParams.set('artistId', artistId);
+      } else {
+        url.searchParams.delete('artistId');
+      }
+
+      window.history.pushState({}, '', url);
+      lastHistoryArtistIdRef.current = artistId;
+    },
+    []
+  );
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -81,7 +114,6 @@ export default function App(): JSX.Element {
     (artist: Artist) => {
       preserveScroll(() => {
         const now = Date.now();
-        setActiveTabId(artist.id);
         setOpenTabs((tabs) => {
           const existing = tabs.find((tab) => tab.id === artist.id);
           if (existing) {
@@ -108,9 +140,11 @@ export default function App(): JSX.Element {
           };
           return [...tabs, nextTab];
         });
+        setActiveTabId(artist.id);
+        updateUrlForArtist(artist.id);
       });
     },
-    [preserveScroll]
+    [preserveScroll, updateUrlForArtist]
   );
 
   const focusTab = useCallback(
@@ -120,33 +154,44 @@ export default function App(): JSX.Element {
         setOpenTabs((tabs) =>
           tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
         );
+        updateUrlForArtist(id);
       });
     },
-    [preserveScroll]
+    [preserveScroll, updateUrlForArtist]
   );
 
   const closeTab = useCallback(
     (id: string) => {
       preserveScroll(() => {
+        let nextActiveId: string | null = null;
         setOpenTabs((tabs) => {
           const remaining = tabs.filter((tab) => tab.id !== id);
-          setActiveTabId((current) => {
-            if (current && current !== id) {
-              return current;
-            }
-            if (remaining.length === 0) {
-              return null;
-            }
-            const next = remaining.reduce((latest, tab) =>
-              tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
-            );
-            return next.id;
-          });
+          if (remaining.length === tabs.length) {
+            nextActiveId = activeTabId ?? null;
+            return tabs;
+          }
+          if (activeTabId && activeTabId !== id) {
+            nextActiveId = activeTabId;
+            return remaining;
+          }
+
+          if (remaining.length === 0) {
+            nextActiveId = null;
+            return remaining;
+          }
+
+          const next = remaining.reduce((latest, tab) =>
+            tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
+          );
+          nextActiveId = next.id;
           return remaining;
         });
+
+        setActiveTabId(nextActiveId);
+        updateUrlForArtist(nextActiveId);
       });
     },
-    [preserveScroll]
+    [activeTabId, preserveScroll, updateUrlForArtist]
   );
 
   useEffect(() => {
