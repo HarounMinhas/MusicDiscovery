@@ -51,7 +51,8 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
         mirror: 1,
         reflexRatio: 0.5,
         reflexAlpha: 1,
-        reflexBright: 1
+        reflexBright: 1,
+        showScaleX: false
       });
       const sourceNode = analyzer.connectInput(audioEl);
       entry = { analyzer, source: sourceNode };
