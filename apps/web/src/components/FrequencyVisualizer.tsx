@@ -49,9 +49,10 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
         colorMode: 'bar-index',
         showBgColor: false,
         mirror: 0,
-        reflexRatio: 0,
-        reflexAlpha: 0,
-        reflexBright: 0,
+        reflexRatio: 0.5,
+        reflexAlpha: 1,
+        reflexBright: 1,
+        reflexFit: true,
         showPeaks: false,
         showEnergy: false
       });
@@ -71,6 +72,8 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
     }
     canvas.style.margin = '0 auto';
     canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
 
     analyzerRef.current = entry.analyzer;
 
@@ -113,9 +116,10 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
       roundBars: true,
       showBgColor: false,
       mirror: 0,
-      reflexRatio: 0,
-      reflexAlpha: 0,
-      reflexBright: 0,
+      reflexRatio: 0.5,
+      reflexAlpha: 1,
+      reflexBright: 1,
+      reflexFit: true,
       showPeaks: false,
       showEnergy: false
     });
