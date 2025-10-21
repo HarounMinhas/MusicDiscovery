@@ -1,13 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PROVIDERS, type ProviderId, type ProviderMetadata } from '@musicdiscovery/shared';
 import { getProviderCatalog } from '../api';
-import { getSelectedProvider, setSelectedProvider, syncProviderSelection } from '../providerSelection';
+import { syncProviderSelection } from '../providerSelection';
 
-export default function ProviderSwitcher() {
+interface ProviderSwitcherProps {
+  value: ProviderId;
+  onChange: (provider: ProviderId) => void;
+}
+
+export default function ProviderSwitcher({ value, onChange }: ProviderSwitcherProps) {
   const [options, setOptions] = useState<ProviderMetadata[]>(PROVIDERS);
-  const [value, setValue] = useState<ProviderId>(() => getSelectedProvider());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const valueRef = useRef(value);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,7 +29,9 @@ export default function ProviderSwitcher() {
           catalog.items.map((item) => item.id),
           catalog.default
         );
-        setValue(next);
+        if (next !== valueRef.current) {
+          onChange(next);
+        }
         setError(null);
       } catch (err) {
         if (cancelled) return;
@@ -35,14 +46,12 @@ export default function ProviderSwitcher() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onChange]);
 
   function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const next = event.target.value as ProviderId;
     if (next === value) return;
-    setSelectedProvider(next);
-    setValue(next);
-    window.location.reload();
+    onChange(next);
   }
 
   return (

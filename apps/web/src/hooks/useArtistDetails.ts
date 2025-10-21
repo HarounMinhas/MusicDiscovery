@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { Artist, Track } from '@musicdiscovery/shared';
+import { useEffect, useMemo, useState } from 'react';
+import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
 import type { ArtistDetailsPayload } from '../cache/artistCache';
 import {
   getCached,
@@ -9,7 +9,6 @@ import {
   withInflight
 } from '../cache/artistCache';
 import { fetchArtistDetails } from '../api';
-import { getSelectedProvider } from '../providerSelection';
 import type { AsyncStatus } from './useArtistSearch';
 
 interface UseArtistDetailsOptions {
@@ -20,6 +19,7 @@ interface UseArtistDetailsOptions {
 interface UseArtistDetailsResult {
   status: AsyncStatus;
   error: string | null;
+  artist: Artist | null;
   topTracks: Track[];
   relatedArtists: Artist[];
 }
@@ -29,7 +29,7 @@ interface InitialState {
   payload: ArtistDetailsPayload | null;
 }
 
-function computeInitialState(artistId: string | null, provider: string): InitialState {
+function computeInitialState(artistId: string | null, provider: ProviderId): InitialState {
   if (!artistId) {
     return { status: 'idle', payload: null };
   }
@@ -47,27 +47,33 @@ function computeInitialState(artistId: string | null, provider: string): Initial
 
 export function useArtistDetails(
   artistId: string | null,
+  provider: ProviderId,
   options: UseArtistDetailsOptions = {}
 ): UseArtistDetailsResult {
   const { topTrackLimit = 5, relatedLimit = 8 } = options;
-  const [provider] = useState(() => getSelectedProvider());
-  const initialStateRef = useRef<InitialState | null>(null);
-  if (initialStateRef.current === null) {
-    initialStateRef.current = computeInitialState(artistId, provider);
-  }
-  const initialState = initialStateRef.current;
+  const initialState = useMemo(() => computeInitialState(artistId, provider), [artistId, provider]);
 
   const [status, setStatus] = useState<AsyncStatus>(initialState.status);
   const [error, setError] = useState<string | null>(null);
+  const [artist, setArtist] = useState<Artist | null>(initialState.payload?.artist ?? null);
   const [topTracks, setTopTracks] = useState<Track[]>(initialState.payload?.topTracks ?? []);
   const [relatedArtists, setRelatedArtists] = useState<Artist[]>(
     initialState.payload?.relatedArtists ?? []
   );
 
   useEffect(() => {
+    setStatus(initialState.status);
+    setError(null);
+    setArtist(initialState.payload?.artist ?? null);
+    setTopTracks(initialState.payload?.topTracks ?? []);
+    setRelatedArtists(initialState.payload?.relatedArtists ?? []);
+  }, [initialState]);
+
+  useEffect(() => {
     if (!artistId) {
       setStatus('idle');
       setError(null);
+      setArtist(null);
       setTopTracks([]);
       setRelatedArtists([]);
       return;
@@ -78,6 +84,7 @@ export function useArtistDetails(
 
     const applyPayload = (payload: ArtistDetailsPayload) => {
       if (cancelled) return;
+      setArtist(payload.artist);
       setTopTracks(payload.topTracks);
       setRelatedArtists(payload.relatedArtists);
       setStatus('success');
@@ -92,6 +99,7 @@ export function useArtistDetails(
       }
       setStatus('error');
       setError(err instanceof Error ? err.message : String(err));
+      setArtist(null);
       setTopTracks([]);
       setRelatedArtists([]);
     };
@@ -129,6 +137,7 @@ export function useArtistDetails(
 
     setStatus('loading');
     setError(null);
+    setArtist(null);
     runFetch(false);
 
     return () => {
@@ -136,5 +145,5 @@ export function useArtistDetails(
     };
   }, [artistId, provider, topTrackLimit, relatedLimit]);
 
-  return { status, error, topTracks, relatedArtists };
+  return { status, error, artist, topTracks, relatedArtists };
 }
