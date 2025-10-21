@@ -123,6 +123,7 @@ export default function App(): JSX.Element {
         setOpenTabs([]);
         setActiveTabId(null);
         lastHistoryArtistIdRef.current = null;
+        handledConfirmedArtistRef.current = null;
         updateUrlForArtist(null);
       });
     },
@@ -213,11 +214,56 @@ export default function App(): JSX.Element {
     [activeTabId, preserveScroll, updateUrlForArtist]
   );
 
+  const handledConfirmedArtistRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (confirmedArtist) {
-      openOrFocusTab(confirmedArtist);
+    if (!confirmedArtist) {
+      handledConfirmedArtistRef.current = null;
+      return;
     }
+
+    if (handledConfirmedArtistRef.current === confirmedArtist.id) {
+      return;
+    }
+
+    handledConfirmedArtistRef.current = confirmedArtist.id;
+    openOrFocusTab(confirmedArtist);
   }, [confirmedArtist, openOrFocusTab]);
+
+  useEffect(() => {
+    if (currentArtistId === activeTabId) {
+      return;
+    }
+
+    if (!currentArtistId) {
+      if (activeTabId !== null) {
+        preserveScroll(() => {
+          setActiveTabId(null);
+        });
+      }
+      return;
+    }
+
+    if (lastHistoryArtistIdRef.current !== currentArtistId) {
+      return;
+    }
+
+    const matchingTab = openTabs.find((tab) => tab.id === currentArtistId);
+    if (!matchingTab) {
+      return;
+    }
+
+    preserveScroll(() => {
+      setActiveTabId(currentArtistId);
+      setOpenTabs((tabs) =>
+        tabs.map((tab) =>
+          tab.id === currentArtistId
+            ? { ...tab, lastActivatedAt: Date.now() }
+            : tab
+        )
+      );
+    });
+  }, [activeTabId, currentArtistId, openTabs, preserveScroll]);
 
   const {
     status: detailStatus,
