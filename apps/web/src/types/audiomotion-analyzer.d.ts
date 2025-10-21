@@ -17,7 +17,7 @@ declare module 'audiomotion-analyzer' {
     reflexBright?: number;
     reflexFit?: boolean;
     showPeaks?: boolean;
-    showEnergy?: boolean;
+    showScaleX: boolean;
   }
 
   export default class AudioMotionAnalyzer {
