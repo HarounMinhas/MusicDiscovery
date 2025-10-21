@@ -11,9 +11,11 @@ import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useArtistDetails } from './hooks/useArtistDetails';
+import { useScrollPreserver } from './hooks/useScrollPreserver';
 
 export default function App(): JSX.Element {
   const [provider] = useState(() => getSelectedProvider());
+  const preserveScroll = useScrollPreserver();
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem('background-mode');
@@ -52,6 +54,39 @@ export default function App(): JSX.Element {
 
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const lastHistoryArtistIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const url = new URL(window.location.href);
+    lastHistoryArtistIdRef.current = url.searchParams.get('artistId');
+  }, []);
+
+  const updateUrlForArtist = useCallback(
+    (artistId: string | null) => {
+      if (lastHistoryArtistIdRef.current === artistId) {
+        return;
+      }
+
+      if (typeof window === 'undefined') {
+        lastHistoryArtistIdRef.current = artistId;
+        return;
+      }
+
+      const url = new URL(window.location.href);
+      if (artistId) {
+        url.searchParams.set('artistId', artistId);
+      } else {
+        url.searchParams.delete('artistId');
+      }
+
+      window.history.pushState({}, '', url);
+      lastHistoryArtistIdRef.current = artistId;
+    },
+    []
+  );
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -75,63 +110,89 @@ export default function App(): JSX.Element {
     window.localStorage.setItem('background-mode', backgroundMode);
   }, [backgroundMode]);
 
-  const openOrFocusTab = useCallback((artist: Artist) => {
-    setOpenTabs((tabs) => {
-      const now = Date.now();
-      const existing = tabs.find((tab) => tab.id === artist.id);
-      if (existing) {
+  const openOrFocusTab = useCallback(
+    (artist: Artist) => {
+      preserveScroll(() => {
+        const now = Date.now();
+        setOpenTabs((tabs) => {
+          const existing = tabs.find((tab) => tab.id === artist.id);
+          if (existing) {
+            return tabs.map((tab) =>
+              tab.id === artist.id
+                ? {
+                    ...tab,
+                    name: artist.name,
+                    imageUrl: artist.imageUrl,
+                    artist,
+                    lastActivatedAt: now
+                  }
+                : tab
+            );
+          }
+
+          const nextTab: OpenTab = {
+            id: artist.id,
+            name: artist.name,
+            imageUrl: artist.imageUrl,
+            artist,
+            openedAt: now,
+            lastActivatedAt: now
+          };
+          return [...tabs, nextTab];
+        });
         setActiveTabId(artist.id);
-        return tabs.map((tab) =>
-          tab.id === artist.id
-            ? {
-                ...tab,
-                name: artist.name,
-                imageUrl: artist.imageUrl,
-                artist,
-                lastActivatedAt: now
-              }
-            : tab
-        );
-      }
-
-      const nextTab: OpenTab = {
-        id: artist.id,
-        name: artist.name,
-        imageUrl: artist.imageUrl,
-        artist,
-        openedAt: now,
-        lastActivatedAt: now
-      };
-      setActiveTabId(artist.id);
-      return [...tabs, nextTab];
-    });
-  }, []);
-
-  const focusTab = useCallback((id: string) => {
-    setActiveTabId(id);
-    setOpenTabs((tabs) =>
-      tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
-    );
-  }, []);
-
-  const closeTab = useCallback((id: string) => {
-    setOpenTabs((tabs) => {
-      const remaining = tabs.filter((tab) => tab.id !== id);
-      setActiveTabId((current) => {
-        if (current && current !== id) {
-          return current;
-        }
-        if (remaining.length === 0) {
-          return null;
-        }
-        const next = remaining.reduce((latest, tab) =>
-          tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
-        );
-        return next.id;
+        updateUrlForArtist(artist.id);
       });
-      return remaining;
-    });
-  }, []);
+    },
+    [preserveScroll, updateUrlForArtist]
+  );
+
+  const focusTab = useCallback(
+    (id: string) => {
+      preserveScroll(() => {
+        setActiveTabId(id);
+        setOpenTabs((tabs) =>
+          tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
+        );
+        updateUrlForArtist(id);
+      });
+    },
+    [preserveScroll, updateUrlForArtist]
+  );
+
+  const closeTab = useCallback(
+    (id: string) => {
+      preserveScroll(() => {
+        let nextActiveId: string | null = null;
+        setOpenTabs((tabs) => {
+          const remaining = tabs.filter((tab) => tab.id !== id);
+          if (remaining.length === tabs.length) {
+            nextActiveId = activeTabId ?? null;
+            return tabs;
+          }
+          if (activeTabId && activeTabId !== id) {
+            nextActiveId = activeTabId;
+            return remaining;
+          }
+
+          if (remaining.length === 0) {
+            nextActiveId = null;
+            return remaining;
+          }
+
+          const next = remaining.reduce((latest, tab) =>
+            tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
+          );
+          nextActiveId = next.id;
+          return remaining;
+        });
+
+        setActiveTabId(nextActiveId);
+        updateUrlForArtist(nextActiveId);
+      });
+    },
+    [activeTabId, preserveScroll, updateUrlForArtist]
+  );
 
   useEffect(() => {
     if (confirmedArtist) {
