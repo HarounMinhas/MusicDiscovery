@@ -5,17 +5,12 @@ import { clearAll as clearArtistCache, makeKey, setCached } from '../../cache/ar
 import type { Artist, Track } from '@musicdiscovery/shared';
 import { useArtistDetails } from '../useArtistDetails';
 
-const { fetchArtistDetailsMock, getSelectedProviderMock } = vi.hoisted(() => ({
-  fetchArtistDetailsMock: vi.fn(),
-  getSelectedProviderMock: vi.fn(() => 'spotify')
+const { fetchArtistDetailsMock } = vi.hoisted(() => ({
+  fetchArtistDetailsMock: vi.fn()
 }));
 
 vi.mock('../../api', () => ({
   fetchArtistDetails: fetchArtistDetailsMock
-}));
-
-vi.mock('../../providerSelection', () => ({
-  getSelectedProvider: getSelectedProviderMock
 }));
 
 function createArtist(id: string): Artist {
@@ -47,7 +42,6 @@ describe('useArtistDetails', () => {
     clearArtistCache();
     window.localStorage.clear();
     fetchArtistDetailsMock.mockReset();
-    getSelectedProviderMock.mockReturnValue('spotify');
   });
 
   afterEach(() => {
@@ -59,9 +53,10 @@ describe('useArtistDetails', () => {
     const cached = buildPayload('artist-1');
     setCached(key, cached);
 
-    const { result } = renderHook(() => useArtistDetails('artist-1'));
+    const { result } = renderHook(() => useArtistDetails('artist-1', 'spotify'));
 
     expect(result.current.status).toBe('success');
+    expect(result.current.artist).toEqual(cached.artist);
     expect(result.current.topTracks).toEqual(cached.topTracks);
     expect(result.current.relatedArtists).toEqual(cached.relatedArtists);
     expect(fetchArtistDetailsMock).not.toHaveBeenCalled();
@@ -78,14 +73,14 @@ describe('useArtistDetails', () => {
     );
 
     const { result, rerender } = renderHook(
-      ({ id }: { id: string }) => useArtistDetails(id),
+      ({ id, provider }: { id: string; provider: string }) => useArtistDetails(id, provider),
       {
-        initialProps: { id: 'artist-2' }
+        initialProps: { id: 'artist-2', provider: 'spotify' }
       }
     );
 
     await waitFor(() => expect(fetchArtistDetailsMock).toHaveBeenCalledTimes(1));
-    rerender({ id: 'artist-2' });
+    rerender({ id: 'artist-2', provider: 'spotify' });
 
     expect(fetchArtistDetailsMock).toHaveBeenCalledTimes(1);
 
@@ -94,6 +89,7 @@ describe('useArtistDetails', () => {
     });
 
     expect(result.current.status).toBe('success');
+    expect(result.current.artist).toEqual(payload.artist);
     expect(result.current.topTracks).toEqual(payload.topTracks);
   });
 
@@ -107,9 +103,10 @@ describe('useArtistDetails', () => {
     fresh.topTracks = [createTrack('artist-3-new')];
     fetchArtistDetailsMock.mockResolvedValue(fresh);
 
-    const { result } = renderHook(() => useArtistDetails('artist-3'));
+    const { result } = renderHook(() => useArtistDetails('artist-3', 'spotify'));
 
     expect(result.current.status).toBe('success');
+    expect(result.current.artist).toEqual(stale.artist);
     expect(result.current.topTracks).toEqual(stale.topTracks);
 
     await waitFor(() => {
@@ -117,6 +114,7 @@ describe('useArtistDetails', () => {
     });
 
     await waitFor(() => {
+      expect(result.current.artist).toEqual(fresh.artist);
       expect(result.current.topTracks).toEqual(fresh.topTracks);
     });
 
