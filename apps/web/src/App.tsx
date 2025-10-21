@@ -1,12 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ProviderSwitcher from './components/ProviderSwitcher';
 import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
 import ArtistDetails from './components/ArtistDetails';
+import ArtistTabsBar from './components/ArtistTabsBar';
 import './styles.css';
 import { getSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useArtistDetails } from './hooks/useArtistDetails';
+import type { Artist } from '@musicdiscovery/shared';
 
 export default function App(): JSX.Element {
   const [provider] = useState(() => getSelectedProvider());
@@ -19,7 +21,6 @@ export default function App(): JSX.Element {
     status: searchStatus,
     error: searchError,
     selectedId,
-    confirmedArtist,
     isPopoverVisible,
     updateQuery,
     focusResults,
@@ -27,8 +28,116 @@ export default function App(): JSX.Element {
     selectArtist
   } = useArtistSearch();
 
+  type OpenTab = {
+    id: string;
+    name: string;
+    imageUrl?: string;
+    openedAt: number;
+    lastActivatedAt: number;
+  };
+
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [tabArtists, setTabArtists] = useState<Record<string, Artist>>({});
+
+  const selectedArtist = useMemo(() => {
+    if (!activeTabId) {
+      return null;
+    }
+    return tabArtists[activeTabId] ?? null;
+  }, [activeTabId, tabArtists]);
+
   const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
-    confirmedArtist?.id ?? null
+    selectedArtist?.id ?? null
+  );
+
+  const openOrFocusTab = useCallback((artist: Artist) => {
+    setTabArtists((current) => ({
+      ...current,
+      [artist.id]: artist
+    }));
+    setOpenTabs((tabs) => {
+      const now = Date.now();
+      const existing = tabs.find((tab) => tab.id === artist.id);
+      if (existing) {
+        return tabs.map((tab) =>
+          tab.id === artist.id
+            ? {
+                ...tab,
+                name: artist.name,
+                imageUrl: artist.imageUrl ?? tab.imageUrl,
+                lastActivatedAt: now
+              }
+            : tab
+        );
+      }
+      return [
+        ...tabs,
+        {
+          id: artist.id,
+          name: artist.name,
+          imageUrl: artist.imageUrl,
+          openedAt: now,
+          lastActivatedAt: now
+        }
+      ];
+    });
+    setActiveTabId(artist.id);
+  }, []);
+
+  const closeTab = useCallback((id: string) => {
+    setOpenTabs((tabs) => {
+      const index = tabs.findIndex((tab) => tab.id === id);
+      if (index === -1) {
+        return tabs;
+      }
+      const remaining = [...tabs.slice(0, index), ...tabs.slice(index + 1)];
+      setTabArtists((current) => {
+        if (!(id in current)) {
+          return current;
+        }
+        const { [id]: _removed, ...rest } = current;
+        return rest;
+      });
+      setActiveTabId((currentActive) => {
+        if (currentActive !== id) {
+          return currentActive;
+        }
+        if (remaining.length === 0) {
+          return null;
+        }
+        const [next] = [...remaining].sort((a, b) => {
+          if (b.lastActivatedAt === a.lastActivatedAt) {
+            return b.openedAt - a.openedAt;
+          }
+          return b.lastActivatedAt - a.lastActivatedAt;
+        });
+        return next.id;
+      });
+      return remaining;
+    });
+  }, []);
+
+  const focusTab = useCallback((id: string) => {
+    setActiveTabId(id);
+    setOpenTabs((tabs) =>
+      tabs.map((tab) =>
+        tab.id === id
+          ? {
+              ...tab,
+              lastActivatedAt: Date.now()
+            }
+          : tab
+      )
+    );
+  }, []);
+
+  const handleResultSelect = useCallback(
+    (artist: Artist) => {
+      selectArtist(artist);
+      openOrFocusTab(artist);
+    },
+    [openOrFocusTab, selectArtist]
   );
 
   const pushToast = useCallback((message: string) => {
@@ -125,6 +234,14 @@ export default function App(): JSX.Element {
                   if (event.key === 'Enter') {
                     event.preventDefault();
                     confirmSelection();
+                    const fallback = results[0] ?? null;
+                    const targetId = selectedId ?? fallback?.id ?? null;
+                    const artist = targetId
+                      ? results.find((item) => item.id === targetId) ?? fallback
+                      : null;
+                    if (artist) {
+                      openOrFocusTab(artist);
+                    }
                   }
                 }}
                 placeholder="Bijvoorbeeld: Stromae"
@@ -134,7 +251,7 @@ export default function App(): JSX.Element {
                 results={results}
                 selectedId={selectedId}
                 isVisible={isPopoverVisible}
-                onSelect={selectArtist}
+                onSelect={handleResultSelect}
               />
             </div>
           </div>
@@ -157,16 +274,27 @@ export default function App(): JSX.Element {
         </section>
 
         <section className="details-panel">
-          {confirmedArtist ? (
-            <ArtistDetails
-              artist={confirmedArtist}
-              status={detailStatus}
-              topTracks={topTracks}
-              relatedArtists={relatedArtists}
-              error={detailError}
-              provider={provider}
-              onPreviewError={pushToast}
-            />
+          {openTabs.length > 0 ? (
+            <>
+              <ArtistTabsBar tabs={openTabs} activeId={activeTabId} onSelect={focusTab} onClose={closeTab} />
+              {selectedArtist ? (
+                <ArtistDetails
+                  artist={selectedArtist}
+                  status={detailStatus}
+                  topTracks={topTracks}
+                  relatedArtists={relatedArtists}
+                  error={detailError}
+                  provider={provider}
+                  onPreviewError={pushToast}
+                  onOpenRelated={openOrFocusTab}
+                />
+              ) : (
+                <div className="placeholder">
+                  <p className="label">Artiestdetails</p>
+                  <p className="muted">Selecteer een artiest om de details te bekijken.</p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="placeholder">
               <p className="label">Artiestdetails</p>
