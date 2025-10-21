@@ -12,6 +12,13 @@ interface FrequencyVisualizerProps {
 
 const GRADIENT_NAME = 'track-visualizer';
 
+interface AnalyzerEntry {
+  analyzer: AudioMotionAnalyzer;
+  source?: MediaElementAudioSourceNode | AudioNode;
+}
+
+const analyzerCache = new WeakMap<HTMLMediaElement, AnalyzerEntry>();
+
 const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
   audioRef,
   width = '100%',
@@ -28,27 +35,44 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
     const audioEl = audioRef.current;
 
     if (!container || !audioEl) {
-      return undefined;
+      return () => {};
     }
 
-    const analyzer = new AudioMotionAnalyzer(container, {
-      source: audioEl,
-      connectSpeakers: false,
-      mode: 2,
-      roundBars: true,
-      colorMode: 'bar-index',
-      showBgColor: false,
-      mirror: 0,
-      reflexRatio: 0.5,
-      reflexAlpha: 1,
-      reflexBright: 1
-    });
+    let entry = analyzerCache.get(audioEl);
+    let analyzer: AudioMotionAnalyzer;
 
-    analyzerRef.current = analyzer;
+    if (!entry) {
+      analyzer = new AudioMotionAnalyzer(container, {
+        connectSpeakers: true,
+        mode: 2,
+        roundBars: true,
+        colorMode: 'bar-index',
+        showBgColor: false,
+        mirror: 1,
+        reflexRatio: 0.5,
+        reflexAlpha: 1,
+        reflexBright: 1
+      });
+      const sourceNode = analyzer.connectInput(audioEl);
+      entry = { analyzer, source: sourceNode };
+      analyzerCache.set(audioEl, entry);
+    } else {
+      ({ analyzer } = entry);
+      if (!entry.source) {
+        entry.source = analyzer.connectInput(audioEl);
+      }
+    }
+
+    const canvas = entry.analyzer.canvas;
+    if (canvas.parentElement !== container) {
+      container.appendChild(canvas);
+    }
+
+    analyzerRef.current = entry.analyzer;
 
     const resumeContext = () => {
-      if (analyzer.audioCtx.state === 'suspended') {
-        void analyzer.audioCtx.resume();
+      if (analyzerRef.current?.audioCtx.state === 'suspended') {
+        void analyzerRef.current.audioCtx.resume();
       }
     };
 
@@ -56,7 +80,13 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
 
     return () => {
       audioEl.removeEventListener('play', resumeContext);
-      analyzer.destroy();
+      const activeAnalyzer = analyzerRef.current;
+      if (activeAnalyzer) {
+        const canvas = activeAnalyzer.canvas;
+        if (canvas.parentElement === container) {
+          container.removeChild(canvas);
+        }
+      }
       analyzerRef.current = null;
     };
   }, [audioRef]);
@@ -68,15 +98,17 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
     }
 
     analyzer.registerGradient(GRADIENT_NAME, {
+      bgColor: '#000',
       colorStops: [barColor]
     });
 
     analyzer.setOptions({
+      mode: 2,
       gradient: GRADIENT_NAME,
       colorMode: 'bar-index',
       roundBars: true,
       showBgColor: false,
-      mirror: 0,
+      mirror: 1,
       reflexRatio: 0.5,
       reflexAlpha: 1,
       reflexBright: 1
