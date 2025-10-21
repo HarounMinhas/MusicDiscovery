@@ -6,7 +6,9 @@
     "packages/*"
   ],
   "packageManager": "pnpm@9.12.0",
-  "engines": {"node": ">=20 <21"},
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "preinstall": "npx -y only-allow pnpm",
     "build": "turbo run build",
@@ -16,6 +18,10 @@
   },
   "devDependencies": {
     "turbo": "^2.0.4",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "react-router-dom": "^6.23.0"
   }
 }
