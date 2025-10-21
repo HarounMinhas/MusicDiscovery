@@ -20,11 +20,33 @@ export default function ArtistTabsBar({ tabs, activeId, onSelect, onClose }: Art
     if (!activeId) {
       return;
     }
+
     const node = tabRefs.current[activeId];
-    if (node) {
-      node.focus();
-      node.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    if (!node) {
+      return;
     }
+
+    node.focus({ preventScroll: true });
+
+    const parent = node.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    const parentLeft = parent.scrollLeft;
+    const parentRight = parentLeft + parent.clientWidth;
+    const nodeLeft = node.offsetLeft;
+    const nodeRight = nodeLeft + node.clientWidth;
+
+    if (nodeLeft >= parentLeft && nodeRight <= parentRight) {
+      return;
+    }
+
+    const target = nodeLeft - parent.clientWidth / 2 + node.clientWidth / 2;
+    parent.scrollTo({
+      left: Math.max(0, target),
+      behavior: 'smooth'
+    });
   }, [activeId]);
 
   if (tabs.length === 0) {
