@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Artist } from '@musicdiscovery/shared';
+import type { Artist, ProviderId } from '@musicdiscovery/shared';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ProviderSwitcher from './components/ProviderSwitcher';
 import LoadingIndicator from './components/LoadingIndicator';
 import SearchResultsList from './components/SearchResultsList';
@@ -8,12 +9,16 @@ import ArtistTabsBar, { type ArtistTabItem } from './components/ArtistTabsBar';
 import BackgroundToggle, { type BackgroundMode } from './components/BackgroundToggle';
 import BackgroundPulse from './components/BackgroundPulse';
 import './styles.css';
-import { getSelectedProvider } from './providerSelection';
+import { getSelectedProvider, setSelectedProvider } from './providerSelection';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useArtistDetails } from './hooks/useArtistDetails';
+import { useScrollPreserver } from './hooks/useScrollPreserver';
 
 export default function App(): JSX.Element {
-  const [provider] = useState(() => getSelectedProvider());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [provider, setProvider] = useState<ProviderId>(() => getSelectedProvider());
+  const preserveScroll = useScrollPreserver();
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem('background-mode');
@@ -52,6 +57,37 @@ export default function App(): JSX.Element {
 
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const lastHistoryArtistIdRef = useRef<string | null>(null);
+  const currentArtistId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('artistId');
+  }, [location.search]);
+
+  useEffect(() => {
+    lastHistoryArtistIdRef.current = currentArtistId;
+  }, [currentArtistId]);
+
+  const updateUrlForArtist = useCallback(
+    (artistId: string | null) => {
+      if (lastHistoryArtistIdRef.current === artistId && currentArtistId === artistId) {
+        return;
+      }
+
+      const params = new URLSearchParams(location.search);
+      if (artistId) {
+        params.set('artistId', artistId);
+      } else {
+        params.delete('artistId');
+      }
+
+      const search = params.toString();
+      const hash = location.hash || '';
+      const nextUrl = `${location.pathname}${search ? `?${search}` : ''}${hash}`;
+      navigate(nextUrl, { preventScrollReset: true });
+      lastHistoryArtistIdRef.current = artistId;
+    },
+    [currentArtistId, location.hash, location.pathname, location.search, navigate]
+  );
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -75,84 +111,204 @@ export default function App(): JSX.Element {
     window.localStorage.setItem('background-mode', backgroundMode);
   }, [backgroundMode]);
 
-  const openOrFocusTab = useCallback((artist: Artist) => {
-    setOpenTabs((tabs) => {
-      const now = Date.now();
-      const existing = tabs.find((tab) => tab.id === artist.id);
-      if (existing) {
-        setActiveTabId(artist.id);
-        return tabs.map((tab) =>
-          tab.id === artist.id
-            ? {
-                ...tab,
-                name: artist.name,
-                imageUrl: artist.imageUrl,
-                artist,
-                lastActivatedAt: now
-              }
-            : tab
-        );
+  const handleProviderChange = useCallback(
+    (next: ProviderId) => {
+      setSelectedProvider(next);
+      if (next === provider) {
+        return;
       }
 
-      const nextTab: OpenTab = {
-        id: artist.id,
-        name: artist.name,
-        imageUrl: artist.imageUrl,
-        artist,
-        openedAt: now,
-        lastActivatedAt: now
-      };
-      setActiveTabId(artist.id);
-      return [...tabs, nextTab];
-    });
-  }, []);
-
-  const focusTab = useCallback((id: string) => {
-    setActiveTabId(id);
-    setOpenTabs((tabs) =>
-      tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
-    );
-  }, []);
-
-  const closeTab = useCallback((id: string) => {
-    setOpenTabs((tabs) => {
-      const remaining = tabs.filter((tab) => tab.id !== id);
-      setActiveTabId((current) => {
-        if (current && current !== id) {
-          return current;
-        }
-        if (remaining.length === 0) {
-          return null;
-        }
-        const next = remaining.reduce((latest, tab) =>
-          tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
-        );
-        return next.id;
+      preserveScroll(() => {
+        setProvider(next);
+        setOpenTabs([]);
+        setActiveTabId(null);
+        lastHistoryArtistIdRef.current = null;
+        handledConfirmedArtistRef.current = null;
+        updateUrlForArtist(null);
       });
-      return remaining;
-    });
-  }, []);
+    },
+    [preserveScroll, provider, updateUrlForArtist]
+  );
+
+  const openOrFocusTab = useCallback(
+    (artist: Artist) => {
+      preserveScroll(() => {
+        const now = Date.now();
+        setOpenTabs((tabs) => {
+          const existing = tabs.find((tab) => tab.id === artist.id);
+          if (existing) {
+            return tabs.map((tab) =>
+              tab.id === artist.id
+                ? {
+                    ...tab,
+                    name: artist.name,
+                    imageUrl: artist.imageUrl,
+                    artist,
+                    lastActivatedAt: now
+                  }
+                : tab
+            );
+          }
+
+          const nextTab: OpenTab = {
+            id: artist.id,
+            name: artist.name,
+            imageUrl: artist.imageUrl,
+            artist,
+            openedAt: now,
+            lastActivatedAt: now
+          };
+          return [...tabs, nextTab];
+        });
+        setActiveTabId(artist.id);
+        updateUrlForArtist(artist.id);
+      });
+    },
+    [preserveScroll, updateUrlForArtist]
+  );
+
+  const focusTab = useCallback(
+    (id: string) => {
+      preserveScroll(() => {
+        setActiveTabId(id);
+        setOpenTabs((tabs) =>
+          tabs.map((tab) => (tab.id === id ? { ...tab, lastActivatedAt: Date.now() } : tab))
+        );
+        updateUrlForArtist(id);
+      });
+    },
+    [preserveScroll, updateUrlForArtist]
+  );
+
+  const closeTab = useCallback(
+    (id: string) => {
+      preserveScroll(() => {
+        let nextActiveId: string | null = null;
+        setOpenTabs((tabs) => {
+          const remaining = tabs.filter((tab) => tab.id !== id);
+          if (remaining.length === tabs.length) {
+            nextActiveId = activeTabId ?? null;
+            return tabs;
+          }
+          if (activeTabId && activeTabId !== id) {
+            nextActiveId = activeTabId;
+            return remaining;
+          }
+
+          if (remaining.length === 0) {
+            nextActiveId = null;
+            return remaining;
+          }
+
+          const next = remaining.reduce((latest, tab) =>
+            tab.lastActivatedAt > latest.lastActivatedAt ? tab : latest
+          );
+          nextActiveId = next.id;
+          return remaining;
+        });
+
+        setActiveTabId(nextActiveId);
+        updateUrlForArtist(nextActiveId);
+      });
+    },
+    [activeTabId, preserveScroll, updateUrlForArtist]
+  );
+
+  const handledConfirmedArtistRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (confirmedArtist) {
-      openOrFocusTab(confirmedArtist);
+    if (!confirmedArtist) {
+      handledConfirmedArtistRef.current = null;
+      return;
     }
+
+    if (handledConfirmedArtistRef.current === confirmedArtist.id) {
+      return;
+    }
+
+    handledConfirmedArtistRef.current = confirmedArtist.id;
+    openOrFocusTab(confirmedArtist);
   }, [confirmedArtist, openOrFocusTab]);
+
+  useEffect(() => {
+    if (currentArtistId === activeTabId) {
+      return;
+    }
+
+    if (!currentArtistId) {
+      if (activeTabId !== null) {
+        preserveScroll(() => {
+          setActiveTabId(null);
+        });
+      }
+      return;
+    }
+
+    if (lastHistoryArtistIdRef.current !== currentArtistId) {
+      return;
+    }
+
+    const matchingTab = openTabs.find((tab) => tab.id === currentArtistId);
+    if (!matchingTab) {
+      return;
+    }
+
+    preserveScroll(() => {
+      setActiveTabId(currentArtistId);
+      setOpenTabs((tabs) =>
+        tabs.map((tab) =>
+          tab.id === currentArtistId
+            ? { ...tab, lastActivatedAt: Date.now() }
+            : tab
+        )
+      );
+    });
+  }, [activeTabId, currentArtistId, openTabs, preserveScroll]);
+
+  const {
+    status: detailStatus,
+    error: detailError,
+    artist: detailArtist,
+    topTracks,
+    relatedArtists
+  } = useArtistDetails(activeTabId, provider);
 
   const activeTab = useMemo(
     () => (activeTabId ? openTabs.find((tab) => tab.id === activeTabId) ?? null : null),
     [activeTabId, openTabs]
   );
 
-  const selectedArtist = activeTab?.artist ?? null;
+  useEffect(() => {
+    if (!detailArtist) {
+      return;
+    }
+
+    setOpenTabs((tabs) => {
+      let mutated = false;
+      const next = tabs.map((tab) => {
+        if (tab.id !== detailArtist.id) {
+          return tab;
+        }
+        if (tab.artist === detailArtist) {
+          return tab;
+        }
+        mutated = true;
+        return {
+          ...tab,
+          name: detailArtist.name,
+          imageUrl: detailArtist.imageUrl,
+          artist: detailArtist
+        };
+      });
+      return mutated ? next : tabs;
+    });
+  }, [detailArtist]);
+
+  const selectedArtist = detailArtist ?? activeTab?.artist ?? null;
 
   const tabItems = useMemo<ArtistTabItem[]>(
     () => openTabs.map(({ id, name, imageUrl }) => ({ id, name, imageUrl })),
     [openTabs]
-  );
-
-  const { status: detailStatus, error: detailError, topTracks, relatedArtists } = useArtistDetails(
-    activeTabId
   );
 
   const pushToast = useCallback((message: string) => {
@@ -229,7 +385,7 @@ export default function App(): JSX.Element {
         </div>
         <div className="app__header-controls">
           <BackgroundToggle value={backgroundMode} onChange={setBackgroundMode} />
-          <ProviderSwitcher />
+          <ProviderSwitcher value={provider} onChange={handleProviderChange} />
         </div>
       </header>
 

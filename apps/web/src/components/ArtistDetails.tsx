@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
 import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
 import LoadingIndicator from './LoadingIndicator';
+import FrequencyVisualizer from './FrequencyVisualizer';
+import SimilarArtistsList from './SimilarArtistsList';
 import { useTrackPreview } from '../hooks/useTrackPreview';
 
 interface ArtistDetailsProps {
@@ -25,7 +27,14 @@ export default function ArtistDetails({
   onOpenRelated
 }: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
-  const { activeTrackId, error: previewError, failure: previewFailure, togglePreview, stopPlayback } = useTrackPreview(
+  const {
+    activeTrackId,
+    audioRef: previewAudioRef,
+    error: previewError,
+    failure: previewFailure,
+    togglePreview,
+    stopPlayback
+  } = useTrackPreview(
     previewEnabled,
     onPreviewError
   );
@@ -89,7 +98,13 @@ export default function ArtistDetails({
                 <ol className="track-list track-list--interactive">
                   {displayTopTracks.map((track) => {
                     const isActive = activeTrackId === track.id;
-                    const canPreview = Boolean(track.previewUrl);
+                    const canPreview = Boolean(track.previewProxyUrl ?? track.previewUrl);
+                    const playIconClass = isActive
+                      ? 'track-list__icon track-list__icon--play track-list__icon--hidden'
+                      : 'track-list__icon track-list__icon--play';
+                    const stopIconClass = isActive
+                      ? 'track-list__icon track-list__icon--stop'
+                      : 'track-list__icon track-list__icon--stop track-list__icon--hidden';
                     return (
                       <li key={track.id}>
                         <button
@@ -104,6 +119,20 @@ export default function ArtistDetails({
                               : `Speel preview van ${track.name}`
                           }
                         >
+                          <span
+                            className={`track-list__visualizer${isActive ? ' is-active' : ''}`}
+                            aria-hidden="true"
+                          >
+                            <span className="track-list__visualizer-overlay" />
+                            {isActive ? (
+                              <FrequencyVisualizer
+                                audioRef={previewAudioRef}
+                                fftSize={1024}
+                                smoothing={0.86}
+                                barColor="rgba(244, 247, 255, 0.05)"
+                              />
+                            ) : null}
+                          </span>
                           <div className="track-list__meta">
                             <strong>{track.name}</strong>
                             <span className="muted">{formatArtists(track)}</span>
@@ -113,8 +142,13 @@ export default function ArtistDetails({
                               {formatDuration(track.durationMs)}
                             </span>
                             {canPreview ? (
-                              <span className="track-list__icon" aria-hidden="true">
-                                {isActive ? '■' : '▶'}
+                              <span className="track-list__indicator" aria-hidden="true">
+                                <span className={playIconClass}>
+                                  ▶
+                                </span>
+                                <span className={stopIconClass}>
+                                  ■
+                                </span>
                               </span>
                             ) : null}
                           </div>
@@ -174,26 +208,7 @@ export default function ArtistDetails({
                 <a href="mailto:myemail@gmail.com">myemail@gmail.com</a>.
               </p>
             ) : (
-              <ul className="related-list">
-                {displayRelated.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className="related-list__button"
-                      onClick={() => onOpenRelated?.(item)}
-                    >
-                      {item.imageUrl ? (
-                        <img className="related-list__thumb" src={item.imageUrl} alt="" />
-                      ) : (
-                        <div className="related-list__thumb related-list__thumb--placeholder" aria-hidden="true">
-                          {item.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="related-list__label">{item.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <SimilarArtistsList artists={displayRelated} onOpen={onOpenRelated} />
             )}
           </section>
         </div>
