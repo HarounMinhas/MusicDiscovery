@@ -52,7 +52,8 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
         reflexRatio: 0,
         reflexAlpha: 0,
         reflexBright: 0,
-        showPeaks: false
+        showPeaks: false,
+        showScaleX: false
       });
       const sourceNode = analyzer.connectInput(audioEl);
       entry = { analyzer, source: sourceNode };
@@ -115,7 +116,8 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
       reflexRatio: 0,
       reflexAlpha: 0,
       reflexBright: 0,
-      showPeaks: false
+      showPeaks: false,
+      showScaleX: false
     });
 
     analyzer.fftSize = fftSize;
