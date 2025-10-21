@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { Artist, Track } from '@musicdiscovery/shared';
+import { useEffect, useMemo, useState } from 'react';
+import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
 import type { ArtistDetailsPayload } from '../cache/artistCache';
 import {
   getCached,
@@ -9,7 +9,6 @@ import {
   withInflight
 } from '../cache/artistCache';
 import { fetchArtistDetails } from '../api';
-import { getSelectedProvider } from '../providerSelection';
 import type { AsyncStatus } from './useArtistSearch';
 
 interface UseArtistDetailsOptions {
@@ -29,7 +28,7 @@ interface InitialState {
   payload: ArtistDetailsPayload | null;
 }
 
-function computeInitialState(artistId: string | null, provider: string): InitialState {
+function computeInitialState(artistId: string | null, provider: ProviderId): InitialState {
   if (!artistId) {
     return { status: 'idle', payload: null };
   }
@@ -47,15 +46,11 @@ function computeInitialState(artistId: string | null, provider: string): Initial
 
 export function useArtistDetails(
   artistId: string | null,
+  provider: ProviderId,
   options: UseArtistDetailsOptions = {}
 ): UseArtistDetailsResult {
   const { topTrackLimit = 5, relatedLimit = 8 } = options;
-  const [provider] = useState(() => getSelectedProvider());
-  const initialStateRef = useRef<InitialState | null>(null);
-  if (initialStateRef.current === null) {
-    initialStateRef.current = computeInitialState(artistId, provider);
-  }
-  const initialState = initialStateRef.current;
+  const initialState = useMemo(() => computeInitialState(artistId, provider), [artistId, provider]);
 
   const [status, setStatus] = useState<AsyncStatus>(initialState.status);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +58,13 @@ export function useArtistDetails(
   const [relatedArtists, setRelatedArtists] = useState<Artist[]>(
     initialState.payload?.relatedArtists ?? []
   );
+
+  useEffect(() => {
+    setStatus(initialState.status);
+    setError(null);
+    setTopTracks(initialState.payload?.topTracks ?? []);
+    setRelatedArtists(initialState.payload?.relatedArtists ?? []);
+  }, [initialState]);
 
   useEffect(() => {
     if (!artistId) {
