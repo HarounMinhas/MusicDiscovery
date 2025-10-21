@@ -3,13 +3,22 @@ import { TokenlessProvider } from './tokenless/index.js';
 import { SpotifyProvider } from './spotify/index.js';
 import { ItunesProvider } from './itunes/index.js';
 import type { MusicProvider } from './types.js';
+import type { HttpRequestOptions } from './httpClient.js';
 
-const PROVIDER_FACTORIES: Record<ProviderId, () => MusicProvider> = {
+export interface ProviderFactoryOptions {
+  http?: HttpRequestOptions;
+}
+
+const PROVIDER_FACTORIES: Record<ProviderId, (options?: ProviderFactoryOptions) => MusicProvider> = {
   spotify: () => new SpotifyProvider(),
-  tokenless: () => new TokenlessProvider(),
+  tokenless: (options) => new TokenlessProvider({ http: options?.http }),
   itunes: () => new ItunesProvider()
 };
 
-export function createProvider(mode: ProviderId): MusicProvider {
-  return PROVIDER_FACTORIES[mode]();
+export function createProvider(mode: ProviderId, options?: ProviderFactoryOptions): MusicProvider {
+  const factory = PROVIDER_FACTORIES[mode];
+  if (!factory) {
+    throw new Error(`Unknown provider mode: ${mode}`);
+  }
+  return factory(options);
 }

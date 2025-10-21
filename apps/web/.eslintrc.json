@@ -1,0 +1,17 @@
+{
+  "root": true,
+  "overrides": [
+    {
+      "files": ["src/**/*.js"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "Program",
+            "message": "Commit geen JavaScript-bestanden in src; gebruik TypeScript."
+          }
+        ]
+      }
+    }
+  ]
+}
