@@ -48,11 +48,12 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
         roundBars: true,
         colorMode: 'bar-index',
         showBgColor: false,
-        mirror: 1,
-        reflexRatio: 0.5,
-        reflexAlpha: 1,
-        reflexBright: 1,
-        showScaleX: false
+        mirror: 0,
+        reflexRatio: 0,
+        reflexAlpha: 0,
+        reflexBright: 0,
+        showPeaks: false,
+        showEnergy: false
       });
       const sourceNode = analyzer.connectInput(audioEl);
       entry = { analyzer, source: sourceNode };
@@ -66,8 +67,10 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
 
     const canvas = entry.analyzer.canvas;
     if (canvas.parentElement !== container) {
-      container.appendChild(canvas);
+      container.replaceChildren(canvas);
     }
+    canvas.style.margin = '0 auto';
+    canvas.style.display = 'block';
 
     analyzerRef.current = entry.analyzer;
 
@@ -109,10 +112,12 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
       colorMode: 'bar-index',
       roundBars: true,
       showBgColor: false,
-      mirror: 1,
-      reflexRatio: 0.5,
-      reflexAlpha: 1,
-      reflexBright: 1
+      mirror: 0,
+      reflexRatio: 0,
+      reflexAlpha: 0,
+      reflexBright: 0,
+      showPeaks: false,
+      showEnergy: false
     });
 
     analyzer.fftSize = fftSize;
@@ -123,7 +128,13 @@ const FrequencyVisualizer: React.FC<FrequencyVisualizerProps> = ({
     <div
       ref={containerRef}
       className="track-list__visualizer-canvas"
-      style={{ width, height, backgroundColor: '#000' }}
+      style={{
+        width,
+        height,
+        backgroundColor: '#000',
+        display: 'grid',
+        placeItems: 'center'
+      }}
       aria-hidden="true"
     />
   );
