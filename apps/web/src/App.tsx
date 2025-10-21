@@ -219,6 +219,14 @@ export default function App(): JSX.Element {
     }
   }, [confirmedArtist, openOrFocusTab]);
 
+  const {
+    status: detailStatus,
+    error: detailError,
+    artist: detailArtist,
+    topTracks,
+    relatedArtists
+  } = useArtistDetails(activeTabId, provider);
+
   const activeTab = useMemo(
     () => (activeTabId ? openTabs.find((tab) => tab.id === activeTabId) ?? null : null),
     [activeTabId, openTabs]
@@ -256,14 +264,6 @@ export default function App(): JSX.Element {
     () => openTabs.map(({ id, name, imageUrl }) => ({ id, name, imageUrl })),
     [openTabs]
   );
-
-  const {
-    status: detailStatus,
-    error: detailError,
-    artist: detailArtist,
-    topTracks,
-    relatedArtists
-  } = useArtistDetails(activeTabId, provider);
 
   const pushToast = useCallback((message: string) => {
     const text = message.trim();
