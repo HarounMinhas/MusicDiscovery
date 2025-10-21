@@ -14,6 +14,7 @@ export type SmartRelatedStrategy = 'deezer-related' | 'fallback-members-aggregat
 export interface SmartRelatedResult {
   strategy: SmartRelatedStrategy;
   items: DeezerArtist[];
+  seeds: string[];
   cacheHit: boolean;
 }
 
@@ -33,11 +34,15 @@ export async function relatedByBandOrMembers(
   if (best) {
     const related = await getRelatedArtists(best.id, normalizedLimit);
     cacheHit = cacheHit || related.cacheHit;
-    return {
-      strategy: 'deezer-related',
-      items: related.artists.slice(0, normalizedLimit),
-      cacheHit
-    };
+    const directRelated = related.artists.slice(0, normalizedLimit);
+    if (directRelated.length > 0 || !options.allowFallback) {
+      return {
+        strategy: 'deezer-related',
+        items: directRelated,
+        seeds: [best.name?.trim() || bandName],
+        cacheHit
+      };
+    }
   }
 
   if (!options.allowFallback) {
@@ -134,6 +139,7 @@ export async function relatedByBandOrMembers(
   return {
     strategy: 'fallback-members-aggregation',
     items: sorted,
+    seeds: limitedMembers,
     cacheHit
   };
 }

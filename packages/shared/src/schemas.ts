@@ -50,6 +50,7 @@ export const SmartRelatedResponseSchema = z.object({
   query: z.string(),
   strategy: SmartRelatedStrategySchema,
   items: z.array(DeezerSmartArtistSchema),
+  seeds: z.array(z.string()).optional(),
   cache: z.object({ hit: z.boolean() }),
   tookMs: z.number()
 });

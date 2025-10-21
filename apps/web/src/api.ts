@@ -1,4 +1,4 @@
-import type { Artist, ProviderId, ProviderMetadata, Track } from '@musicdiscovery/shared';
+import type { Artist, ProviderId, ProviderMetadata, SmartRelatedResponse, Track } from '@musicdiscovery/shared';
 import type { ArtistDetailsPayload } from './cache/artistCache';
 import { getSelectedProvider } from './providerSelection';
 
@@ -37,6 +37,13 @@ export async function getRelatedArtists(id: string, limit = 10, provider?: Provi
   return data.items;
 }
 
+export async function getSmartRelatedArtists(query: string, limit = 10): Promise<SmartRelatedResponse> {
+  return request<SmartRelatedResponse>(
+    `/deezer/related-smart?query=${encodeURIComponent(query)}&limit=${limit}`,
+    { includeProvider: false }
+  );
+}
+
 export async function getTopTracks(
   id: string,
   market?: string,
@@ -65,11 +72,42 @@ export async function fetchArtistDetails(
   options: { topTrackLimit?: number; relatedLimit?: number } = {}
 ): Promise<ArtistDetailsPayload> {
   const { topTrackLimit = 5, relatedLimit = 8 } = options;
-  const [artist, topTracks, relatedArtists] = await Promise.all([
+  const [artist, topTracks, initialRelated] = await Promise.all([
     getArtist(artistId, provider),
     getTopTracks(artistId, undefined, topTrackLimit, provider),
     getRelatedArtists(artistId, relatedLimit, provider)
   ]);
+
+  let relatedArtists = initialRelated;
+
+  if (relatedArtists.length === 0) {
+    console.log(
+      `[smart-related] initiating fallback for "${artist.name}" (artistId=${artistId}) limit=${relatedLimit}`
+    );
+    try {
+      const smart = await getSmartRelatedArtists(artist.name, relatedLimit);
+      const seeds = smart.seeds ?? [];
+      const mapped = smart.items.map(mapSmartArtistToArtist);
+      if (mapped.length > 0) {
+        console.log(
+          `[smart-related] results for "${artist.name}" strategy=${smart.strategy}`,
+          {
+            query: smart.query,
+            seeds,
+            results: mapped.map((item) => ({ id: item.id, name: item.name }))
+          }
+        );
+        relatedArtists = mapped;
+      } else {
+        console.warn(
+          `[smart-related] no matches found for "${artist.name}" after fallback`,
+          { query: smart.query, seeds }
+        );
+      }
+    } catch (error) {
+      console.error(`[smart-related] failed to fetch fallback results for "${artist.name}"`, error);
+    }
+  }
 
   return {
     artist,
@@ -77,5 +115,24 @@ export async function fetchArtistDetails(
     relatedArtists,
     provider,
     fetchedAt: Date.now()
+  };
+}
+
+function mapSmartArtistToArtist(item: SmartRelatedResponse['items'][number]): Artist {
+  const rawId = String(item.id);
+  const id = rawId.startsWith('deezer:') ? rawId : `deezer:${rawId}`;
+  const imageUrl =
+    item.picture_xl ??
+    item.picture_big ??
+    item.picture_medium ??
+    item.picture_small ??
+    item.picture ??
+    undefined;
+
+  return {
+    id,
+    name: item.name,
+    imageUrl,
+    popularity: item.nb_fan
   };
 }
