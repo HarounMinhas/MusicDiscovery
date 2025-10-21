@@ -1,16 +1,44 @@
-const cache = new Map<string, { value: unknown; expiresAt: number }>();
+import { LRUCache } from 'lru-cache';
 
-export async function withCache<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
-  const now = Date.now();
-  const hit = cache.get(key);
-  if (hit && hit.expiresAt > now) {
-    return hit.value as T;
+interface CacheEntry<T> {
+  value: T;
+}
+
+const DEFAULT_MAX_ITEMS = 5000;
+const DEFAULT_TTL_MS = 10 * 60 * 1000;
+
+const defaultCache = new LRUCache<string, CacheEntry<unknown>>({
+  max: DEFAULT_MAX_ITEMS,
+  ttl: DEFAULT_TTL_MS,
+  ttlAutopurge: true
+});
+
+export type CacheStore<T> = LRUCache<string, CacheEntry<T>>;
+
+export function createCache<T>(options: LRUCache.Options<string, CacheEntry<T>> = {}): CacheStore<T> {
+  return new LRUCache<string, CacheEntry<T>>({
+    max: DEFAULT_MAX_ITEMS,
+    ttl: DEFAULT_TTL_MS,
+    ttlAutopurge: true,
+    ...options
+  });
+}
+
+export async function withCache<T>(
+  key: string,
+  ttlMs: number,
+  loader: () => Promise<T>,
+  store: CacheStore<T> = defaultCache as CacheStore<T>
+): Promise<T> {
+  const cached = store.get(key);
+  if (cached) {
+    return cached.value;
   }
   const value = await loader();
-  cache.set(key, { value, expiresAt: now + ttlMs });
+  store.set(key, { value }, { ttl: ttlMs });
   return value;
 }
 
-export function clearCache() {
-  cache.clear();
+export function clearCache(store: CacheStore<unknown> = defaultCache): void {
+  store.clear();
 }

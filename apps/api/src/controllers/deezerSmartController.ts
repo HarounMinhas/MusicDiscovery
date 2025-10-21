@@ -1,8 +1,10 @@
 import type { Request, Response } from 'express';
+import type { Logger } from 'pino';
 import { SmartRelatedResponseSchema } from '@musicdiscovery/shared';
 import { relatedByBandOrMembers } from '../services/smartRelatedService.js';
 import { getSmartRelatedConfig } from '../services/smartRelatedConfig.js';
 import { SmartRelatedError } from '../services/errors.js';
+import { logger } from '../logger.js';
 
 function parseLimit(value: unknown, fallback = 10, max = 20) {
   const numeric = Number(value);
@@ -36,6 +38,15 @@ function mapErrorToStatus(code: SmartRelatedError['code']): number {
   }
 }
 
+interface RequestWithLogger extends Request {
+  log?: Logger;
+}
+
+function getLog(req: Request) {
+  const base = (req as RequestWithLogger).log ?? logger;
+  return base.child({ route: 'smart-related' });
+}
+
 export async function getSmartRelated(req: Request, res: Response) {
   const startedAt = Date.now();
   const config = getSmartRelatedConfig();
@@ -44,12 +55,13 @@ export async function getSmartRelated(req: Request, res: Response) {
   const fallbackParam = parseUseFallback(req.query.useFallback);
   const allowFallback = config.enabled && (fallbackParam ?? config.defaultUseFallback);
 
-  console.log(`[smart-related] start query="${query}" limit=${limit} fallback=${allowFallback}`);
+  const log = getLog(req);
+  log.info({ query, limit, allowFallback }, 'smart-related lookup started');
 
   try {
     const result = await relatedByBandOrMembers(query, limit, { allowFallback });
     const tookMs = Date.now() - startedAt;
-    console.log(`[smart-related] success query="${query}" strategy=${result.strategy} tookMs=${tookMs}`);
+    log.info({ query, tookMs, strategy: result.strategy, cacheHit: result.cacheHit }, 'smart-related lookup succeeded');
     const payload = SmartRelatedResponseSchema.parse({
       query,
       strategy: result.strategy,
@@ -62,10 +74,7 @@ export async function getSmartRelated(req: Request, res: Response) {
   } catch (error) {
     const tookMs = Date.now() - startedAt;
     if (error instanceof SmartRelatedError) {
-      console.warn(
-        `[smart-related] failed query="${query}" code=${error.code} tookMs=${tookMs}`,
-        error.details ?? {}
-      );
+      log.warn({ query, tookMs, code: error.code, details: error.details ?? {} }, 'smart-related lookup failed');
       const status = mapErrorToStatus(error.code);
       res.status(status).json({
         error: {
@@ -76,7 +85,7 @@ export async function getSmartRelated(req: Request, res: Response) {
       });
       return;
     }
-    console.error(`[smart-related] unexpected error query="${query}"`, error);
+    log.error({ query, tookMs, err: error }, 'smart-related lookup crashed');
     res.status(500).json({
       error: {
         code: 'INTERNAL',
