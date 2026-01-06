@@ -84,6 +84,11 @@ pnpm dev
 
 With these steps you can search for artists immediately using the tokenless mode without any secrets.
 
+## Testing and troubleshooting
+
+- Run the full monorepo test suite with `pnpm test`. The workspace pins Vitest 1.6 to keep all packages on the same runner version; mismatched installs can trigger errors like `Cannot set property testPath of #<Object> which has only a getter`.
+- If you pulled fresh changes and still see tooling errors, remove any pre-existing `node_modules` directory and rerun `pnpm install` to hydrate the workspace with the pinned versions.
+
 ## Getting help
 
 Each workspace contains its own README with additional context:
