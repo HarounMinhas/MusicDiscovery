@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import type { Artist, ProviderId, ProviderMetadata, Track } from '@musicdiscovery/shared';
 
 import ArtistDetails from './components/ArtistDetails';
@@ -185,6 +185,7 @@ export default function AppRoutes(props: AppRoutesProps) {
   return (
     <Routes>
       <Route path="/" element={<HomeRoute {...props} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
