@@ -2,7 +2,9 @@ name: Deploy MusicDiscovery web to user pages repo
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -47,5 +49,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Deploy MusicDiscovery from MusicDiscovery repo" || echo "No changes to commit"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Deploy MusicDiscovery from MusicDiscovery repo"
+            git push
+          fi
