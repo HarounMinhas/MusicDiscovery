@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Artist } from '@musicdiscovery/shared';
-import { searchArtists } from '../api';
+import { useQuery } from '@tanstack/react-query';
+import type { Artist, ProviderId } from '@musicdiscovery/shared';
+import { searchArtistsUseCase } from '../application/usecases/searchArtists';
 import { useDebouncedValue } from './useDebouncedValue';
 
 export type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -25,12 +26,12 @@ interface UseArtistSearchResult {
   selectArtist: (artist: Artist) => void;
 }
 
-export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtistSearchResult {
+export function useArtistSearch(
+  provider: ProviderId,
+  options: UseArtistSearchOptions = {}
+): UseArtistSearchResult {
   const { limit = 10, debounceMs = 350 } = options;
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Artist[]>([]);
-  const [status, setStatus] = useState<AsyncStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmedArtist, setConfirmedArtist] = useState<Artist | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -43,56 +44,39 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
   }, [selectedId]);
 
   const debouncedQuery = useDebouncedValue(query, debounceMs);
+  const trimmedQuery = debouncedQuery.trim();
+
+  const searchQuery = useQuery({
+    queryKey: ['artist-search', provider, trimmedQuery, limit],
+    queryFn: () => searchArtistsUseCase(provider, trimmedQuery, limit),
+    enabled: Boolean(trimmedQuery),
+    staleTime: 30_000
+  });
+
+  const results = searchQuery.data ?? [];
 
   useEffect(() => {
-    const trimmed = debouncedQuery.trim();
-
-    if (!trimmed) {
-      setStatus('idle');
-      setError(null);
-      setResults([]);
+    if (!trimmedQuery) {
       setSelectedId(null);
       setIsPopoverOpen(false);
       manualHideRef.current = false;
       return;
     }
 
-    let cancelled = false;
-    setStatus('loading');
-    setError(null);
+    if (results.length === 0) {
+      setSelectedId(null);
+      setIsPopoverOpen(false);
+      return;
+    }
 
-    searchArtists(trimmed, limit)
-      .then((items) => {
-        if (cancelled) return;
-        setResults(items);
-        setStatus('success');
-        if (items.length === 0) {
-          setSelectedId(null);
-          setIsPopoverOpen(false);
-          return;
-        }
+    if (!manualHideRef.current) {
+      setIsPopoverOpen(true);
+    }
 
-        if (!manualHideRef.current) {
-          setIsPopoverOpen(true);
-        }
-
-        if (!items.some((item) => item.id === selectedIdRef.current)) {
-          setSelectedId(items[0].id);
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setStatus('error');
-        setError(err instanceof Error ? err.message : String(err));
-        setResults([]);
-        setSelectedId(null);
-        setIsPopoverOpen(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedQuery, limit]);
+    if (!results.some((item) => item.id === selectedIdRef.current)) {
+      setSelectedId(results[0].id);
+    }
+  }, [results, trimmedQuery]);
 
   const hasResults = results.length > 0;
 
@@ -150,11 +134,23 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
     [results, selectedId]
   );
 
+  const status: AsyncStatus = !trimmedQuery
+    ? 'idle'
+    : searchQuery.isPending
+      ? 'loading'
+      : searchQuery.isError
+        ? 'error'
+        : 'success';
+
   return {
     query,
     results,
     status,
-    error,
+    error: searchQuery.isError
+      ? searchQuery.error instanceof Error
+        ? searchQuery.error.message
+        : String(searchQuery.error)
+      : null,
     selectedId,
     highlightedArtist,
     confirmedArtist,
@@ -165,4 +161,3 @@ export function useArtistSearch(options: UseArtistSearchOptions = {}): UseArtist
     selectArtist
   };
 }
-
