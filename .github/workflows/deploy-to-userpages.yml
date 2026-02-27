@@ -2,7 +2,9 @@ name: Deploy MusicDiscovery web to user pages repo
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -10,6 +12,8 @@ jobs:
     steps:
       - name: Checkout source repo
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -27,6 +31,15 @@ jobs:
       - name: Build web and workspace dependencies
         run: pnpm --filter @musicdiscovery/web... build
 
+      - name: Ensure GH_PAGES_TOKEN exists
+        env:
+          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+        run: |
+          if [ -z "$GH_PAGES_TOKEN" ]; then
+            echo "GH_PAGES_TOKEN is missing. Add a PAT with repo write access to secrets." >&2
+            exit 1
+          fi
+
       - name: Checkout user pages repo
         uses: actions/checkout@v4
         with:
@@ -42,10 +55,17 @@ jobs:
           touch userpages/MusicDiscovery/.nojekyll
 
       - name: Commit and push
+        env:
+          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
         run: |
           cd userpages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Deploy MusicDiscovery from MusicDiscovery repo" || echo "No changes to commit"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Deploy MusicDiscovery from MusicDiscovery repo"
+            git remote set-url origin "https://x-access-token:${GH_PAGES_TOKEN}@github.com/HarounMinhas/harounminhas.github.io.git"
+            git push origin main
+          fi
