@@ -56,7 +56,7 @@ function AppInner(): JSX.Element {
     focusResults,
     confirmSelection,
     selectArtist
-  } = useArtistSearch();
+  } = useArtistSearch(provider);
   const {
     status: detailStatus,
     error: detailError,
