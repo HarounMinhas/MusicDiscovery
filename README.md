@@ -77,3 +77,20 @@ Commit geen `.env` bestanden of andere gevoelige gegevens naar deze repository.
 - De broncode in deze repository is leidend.
 - Deploy target is `HarounMinhas/harounminhas.github.io` in de map `MusicDiscovery/`.
 - Deployment start automatisch na een push naar `main`.
+
+## Build notes (Render)
+
+Render-builds gebruiken production-only dependencies en genereren standaard geen DTS-bestanden voor packages. Dit houdt deploys sneller en vermindert onnodig build-werk in CI.
+
+Als je wel DTS-bestanden nodig hebt (bijv. lokaal of voor type-distributie), run dan:
+
+```bash
+pnpm -r build:dts
+```
+
+Of per package, bijvoorbeeld:
+
+```bash
+pnpm --filter @musicdiscovery/shared build:dts
+pnpm --filter @musicdiscovery/providers build:dts
+```
