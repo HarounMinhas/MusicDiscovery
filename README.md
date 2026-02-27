@@ -60,8 +60,6 @@ No environment variables or API keys are required. Do not commit `.env` files or
 
 ## Deployment
 
-The GitHub Pages workflow automatically builds and deploys this application to `/MusicDiscovery/` when changes are pushed to the main branch.
-
----
-
-*Note: This documentation has been formatted and reviewed with assistance from large language models (LLMs) to ensure clarity and professional presentation.*
+- Source of truth is this repository.
+- Deploy target is `HarounMinhas/harounminhas.github.io` in the `MusicDiscovery/` folder.
+- Deployment is triggered on push to `main`.

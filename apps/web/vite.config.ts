@@ -5,6 +5,7 @@ export default defineConfig(() => {
   const apiPrefix = process.env.VITE_API_PREFIX || '/api';
 
   return {
+    base: '/MusicDiscovery/',
     plugins: [react()],
     server: {
       host: true,
