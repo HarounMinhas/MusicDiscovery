@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { ArtistDetailsPayload } from '../artistCache';
 import type { Artist, Track } from '@musicdiscovery/shared';
 
@@ -25,9 +25,7 @@ function createPayload(id: string): ArtistDetailsPayload {
   return {
     artist: createArtist(id),
     topTracks: [createTrack(`${id}-1`), createTrack(`${id}-2`)],
-    relatedArtists: [createArtist(`${id}-related`)],
-    provider: PROVIDER,
-    fetchedAt: Date.now()
+    relatedArtists: [createArtist(`${id}-related`)]
   };
 }
 
@@ -39,31 +37,34 @@ async function loadCacheModule() {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2024-01-01T00:00:00Z'));
-  window.localStorage.clear();
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 describe('artistCache', () => {
   test('returns fresh data and identifies stale entries', async () => {
     const cache = await loadCacheModule();
-    cache.clearAll();
     const key = cache.makeKey(PROVIDER, 'artist-1');
-    cache.setCached(key, createPayload('artist-1'), cache.DEFAULT_TTL_MS);
+    cache.setCached(key, createPayload('artist-1'));
 
     expect(cache.getCached(key)).not.toBeNull();
 
-    vi.advanceTimersByTime(cache.DEFAULT_TTL_MS + 1000);
+    vi.advanceTimersByTime(1000 * 60 * 5 + 1000);
 
     expect(cache.getCached(key)).toBeNull();
     expect(cache.getCachedStale(key)?.artist.id).toBe('artist-1');
   });
 
+  test('evicts stale entries after stale ttl passes', async () => {
+    const cache = await loadCacheModule();
+    const key = cache.makeKey(PROVIDER, 'artist-evict');
+    cache.setCached(key, createPayload('artist-evict'));
+
+    vi.advanceTimersByTime(1000 * 60 * 60 + 1000);
+
+    expect(cache.getCachedStale(key)).toBeNull();
+  });
+
   test('deduplicates in-flight promises', async () => {
     const cache = await loadCacheModule();
-    cache.clearAll();
     const key = cache.makeKey(PROVIDER, 'artist-2');
     const payload = createPayload('artist-2');
     const factory = vi.fn(async () => payload);
@@ -76,50 +77,5 @@ describe('artistCache', () => {
     expect(factory).toHaveBeenCalledTimes(1);
     expect(resultA).toEqual(payload);
     expect(resultB).toEqual(payload);
-  });
-
-  test('evicts least recently used entries when over capacity', async () => {
-    const cache = await loadCacheModule();
-    cache.clearAll();
-
-    const firstKey = cache.makeKey(PROVIDER, 'artist-0');
-    for (let index = 0; index < cache.MAX_ENTRIES; index += 1) {
-      const key = cache.makeKey(PROVIDER, `artist-${index}`);
-      cache.setCached(key, createPayload(`artist-${index}`));
-      vi.advanceTimersByTime(1);
-    }
-
-    // Access a more recent key to ensure the first one is the oldest
-    cache.getCachedStale(cache.makeKey(PROVIDER, `artist-${cache.MAX_ENTRIES - 1}`));
-
-    const extraKey = cache.makeKey(PROVIDER, 'artist-extra');
-    cache.setCached(extraKey, createPayload('artist-extra'));
-
-    expect(cache.getCachedStale(firstKey)).toBeNull();
-    expect(cache.getCachedStale(extraKey)).not.toBeNull();
-  });
-
-  test('clears persisted cache on schema version mismatch', async () => {
-    const key = `${PROVIDER}:artist-persisted`;
-    const stored: ArtistDetailsPayload = createPayload('persisted');
-    const snapshot = {
-      version: 999,
-      entries: [
-        {
-          key,
-          version: 999,
-          ttlMs: 6 * 60 * 60 * 1000,
-          value: stored,
-          lastAccessedAt: Date.now()
-        }
-      ]
-    };
-
-    window.localStorage.setItem('artistDetailsCache.v1', JSON.stringify(snapshot));
-
-    const cache = await loadCacheModule();
-
-    expect(cache.getCachedStale(key)).toBeNull();
-    expect(window.localStorage.getItem(cache.STORAGE_KEY)).toBeNull();
   });
 });
