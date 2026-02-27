@@ -24,8 +24,8 @@ jobs:
       - name: Install deps
         run: pnpm install
 
-      - name: Build web
-        run: pnpm --filter @musicdiscovery/web build
+      - name: Build web and workspace dependencies
+        run: pnpm --filter @musicdiscovery/web... build
 
       - name: Checkout user pages repo
         uses: actions/checkout@v4
