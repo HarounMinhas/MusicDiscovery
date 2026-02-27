@@ -1,65 +1,79 @@
 # MusicDiscovery
 
-Music discovery web application for exploring related artists and top tracks using public music APIs.
+MusicDiscovery is een webapp waarmee je snel nieuwe muziek kunt ontdekken.
+Je zoekt op een artiest en krijgt daarna direct vergelijkbare artiesten te zien, met daarbij hun populairste nummers.
+Zo kun je makkelijk van de ene artiest doorklikken naar de volgende en stap voor stap nieuwe muziek vinden.
+
+## Wat de applicatie doet
+
+De app is bedoeld voor mensen die niet precies weten waar ze moeten beginnen, maar wel iets nieuws willen luisteren.
+In plaats van eindeloos zoeken krijg je meteen suggesties die aansluiten op wat je al kent.
+
+Kort gezegd:
+
+- je kiest een artiest
+- de app laat vergelijkbare artiesten zien
+- per artiest zie je de bekendste tracks
+- waar mogelijk kun je previews of links openen om direct te luisteren
 
 ## Status
 
-Work in progress. The portfolio landing page includes a link to this application, and the GitHub Pages deployment workflow is configured to build and publish the app once development is complete.
+Dit project is nog in ontwikkeling.
+De basis staat en de deployment workflow is al ingericht, maar het project wordt nog verder verbeterd.
 
-## Project Structure
+## Projectstructuur
 
-Monorepo managed with pnpm workspaces and Turborepo:
+Dit is een monorepo met pnpm workspaces en Turborepo:
 
-```
+```text
 MusicDiscovery/
-├── apps/          # Application packages
-├── packages/      # Shared libraries and utilities
-├── infra/         # Infrastructure configuration
+├── apps/          # Applicaties
+├── packages/      # Gedeelde code en utilities
+├── infra/         # Infrastructuur en deployment configuratie
 └── pnpm-workspace.yaml
 ```
 
-## Technology Stack
+## Technologie
 
-- **Package Manager**: pnpm with workspaces
-- **Build System**: Turborepo for monorepo orchestration
-- **TypeScript**: Shared configuration via tsconfig.base.json
-- **Deployment**: Render.com (render.yaml configuration)
+- Package manager: pnpm met workspaces
+- Build en orchestration: Turborepo
+- Taal: TypeScript met gedeelde basisconfiguratie
+- Deployment: Render via `render.yaml`
 
-## Data Sources
+## Databronnen
 
-This project uses only public API endpoints to avoid authentication complexity:
+De app gebruikt publieke API's, zodat je geen API keys hoeft te beheren.
 
-- **Deezer API** - Primary source for related artists and top tracks
-- **iTunes Search API** - Discovery links and audio previews
+- Deezer API: bron voor vergelijkbare artiesten en toptracks
+- iTunes Search API: links en audio previews
 
-No API keys or authentication required.
+## Lokale ontwikkeling
 
-## Development
-
-### Prerequisites
+### Vereisten
 
 - Node.js 18+
 - pnpm 8+
 
-### Setup
+### Starten
 
 ```bash
-# Install dependencies
+# Dependencies installeren
 pnpm install
 
-# Run development server
+# Development server starten
 pnpm dev
 
-# Build for production
+# Productiebuild maken
 pnpm build
 ```
 
 ## Security
 
-No environment variables or API keys are required. Do not commit `.env` files or secrets to this repository.
+Voor dit project zijn geen secrets of API keys nodig.
+Commit geen `.env` bestanden of andere gevoelige gegevens naar deze repository.
 
 ## Deployment
 
-- Source of truth is this repository.
-- Deploy target is `HarounMinhas/harounminhas.github.io` in the `MusicDiscovery/` folder.
-- Deployment is triggered on push to `main`.
+- De broncode in deze repository is leidend.
+- Deploy target is `HarounMinhas/harounminhas.github.io` in de map `MusicDiscovery/`.
+- Deployment start automatisch na een push naar `main`.
