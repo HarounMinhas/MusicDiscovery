@@ -17,10 +17,12 @@ if (env.NODE_ENV === 'production') {
 // Security and parsing middleware
 app.use(helmet());
 app.use(express.json());
+
+const allowAnyOrigin = env.CORS_ORIGIN === '*';
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
-    credentials: true
+    origin: allowAnyOrigin ? '*' : env.CORS_ORIGIN,
+    credentials: !allowAnyOrigin
   })
 );
 
