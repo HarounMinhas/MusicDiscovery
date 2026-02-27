@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useI18n } from '../i18n';
+
 export type BackgroundMode = 'static' | 'animated';
 
 type BackgroundToggleProps = {
@@ -7,35 +9,27 @@ type BackgroundToggleProps = {
   onChange: (value: BackgroundMode) => void;
 };
 
-const OPTIONS: Array<{ value: BackgroundMode; label: string }> = [
-  { value: 'static', label: 'Statisch' },
-  { value: 'animated', label: 'Dynamisch' }
-];
-
 export default function BackgroundToggle({ value, onChange }: BackgroundToggleProps) {
+  const { t } = useI18n();
+  const enabled = value === 'animated';
+
   return (
     <div className="background-toggle">
-      <span className="label background-toggle__label">Achtergrond</span>
-      <div className="background-toggle__buttons" role="group" aria-label="Achtergrond">
-        {OPTIONS.map((option) => {
-          const isActive = value === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={`background-toggle__button${isActive ? ' is-active' : ''}`}
-              aria-pressed={isActive}
-              onClick={() => {
-                if (!isActive) {
-                  onChange(option.value);
-                }
-              }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <span className="label background-toggle__label">{t('background.label')}</span>
+      <label className="background-toggle__switch">
+        <input
+          className="background-toggle__switch-input"
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => {
+            onChange(event.target.checked ? 'animated' : 'static');
+          }}
+        />
+        <span className="background-toggle__switch-track" aria-hidden="true">
+          <span className="background-toggle__switch-thumb" />
+        </span>
+        <span className="background-toggle__switch-text">{enabled ? t('background.on') : t('background.off')}</span>
+      </label>
     </div>
   );
 }

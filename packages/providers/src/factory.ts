@@ -1,6 +1,5 @@
 import type { ProviderId } from '@musicdiscovery/shared';
 import { TokenlessProvider } from './tokenless/index.js';
-import { SpotifyProvider } from './spotify/index.js';
 import { ItunesProvider } from './itunes/index.js';
 import type { MusicProvider } from './types.js';
 import type { HttpRequestOptions } from './httpClient.js';
@@ -10,7 +9,7 @@ export interface ProviderFactoryOptions {
 }
 
 const PROVIDER_FACTORIES: Record<ProviderId, (options?: ProviderFactoryOptions) => MusicProvider> = {
-  spotify: () => new SpotifyProvider(),
+  // "tokenless" is our Deezer-first implementation (no OAuth / no secrets).
   tokenless: (options) => new TokenlessProvider({ http: options?.http }),
   itunes: () => new ItunesProvider()
 };

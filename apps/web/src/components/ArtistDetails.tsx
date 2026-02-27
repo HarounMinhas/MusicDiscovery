@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
-import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
+import type { Artist, ProviderId, Track, ServiceMetadata } from '@musicdiscovery/shared';
 import LoadingIndicator from './LoadingIndicator';
 import FrequencyVisualizer from './FrequencyVisualizer';
 import SimilarArtistsList from './SimilarArtistsList';
+import ServiceStatusLabels from './ServiceStatusLabels';
 import { useTrackPreview } from '../hooks/useTrackPreview';
 
 interface ArtistDetailsProps {
@@ -12,6 +13,7 @@ interface ArtistDetailsProps {
   relatedArtists: Artist[];
   error: string | null;
   provider: ProviderId;
+  serviceMetadata?: ServiceMetadata;
   onPreviewError?: (message: string) => void;
   onOpenRelated?: (artist: Artist) => void;
 }
@@ -23,6 +25,7 @@ export default function ArtistDetails({
   relatedArtists,
   error,
   provider,
+  serviceMetadata,
   onPreviewError,
   onOpenRelated
 }: ArtistDetailsProps) {
@@ -75,7 +78,10 @@ export default function ArtistDetails({
         )}
         <div>
           <p className="label">Geselecteerde artiest</p>
-          <h2>{artist.name}</h2>
+          <div className="artist-header-title">
+            <h2>{artist.name}</h2>
+            <ServiceStatusLabels metadata={serviceMetadata} />
+          </div>
           {artist.genres?.length ? <p className="muted">{artist.genres.slice(0, 3).join(', ')}</p> : null}
         </div>
       </header>
@@ -129,7 +135,7 @@ export default function ArtistDetails({
                                 audioRef={previewAudioRef}
                                 fftSize={1024}
                                 smoothing={0.86}
-                                barColor="rgba(244, 247, 255, 0.05)"
+                                barColor="rgba(255, 255, 255, 0.55)"
                               />
                             ) : null}
                           </span>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Artist, ProviderId, Track } from '@musicdiscovery/shared';
+import type { Artist, ProviderId, Track, ServiceMetadata } from '@musicdiscovery/shared';
 import type { ArtistDetailsPayload } from '../cache/artistCache';
 import {
   getCached,
@@ -22,6 +22,7 @@ interface UseArtistDetailsResult {
   artist: Artist | null;
   topTracks: Track[];
   relatedArtists: Artist[];
+  serviceMetadata?: ServiceMetadata;
 }
 
 interface InitialState {
@@ -60,6 +61,9 @@ export function useArtistDetails(
   const [relatedArtists, setRelatedArtists] = useState<Artist[]>(
     initialState.payload?.relatedArtists ?? []
   );
+  const [serviceMetadata, setServiceMetadata] = useState<ServiceMetadata | undefined>(
+    initialState.payload?.serviceMetadata
+  );
 
   useEffect(() => {
     setStatus(initialState.status);
@@ -67,6 +71,7 @@ export function useArtistDetails(
     setArtist(initialState.payload?.artist ?? null);
     setTopTracks(initialState.payload?.topTracks ?? []);
     setRelatedArtists(initialState.payload?.relatedArtists ?? []);
+    setServiceMetadata(initialState.payload?.serviceMetadata);
   }, [initialState]);
 
   useEffect(() => {
@@ -76,6 +81,7 @@ export function useArtistDetails(
       setArtist(null);
       setTopTracks([]);
       setRelatedArtists([]);
+      setServiceMetadata(undefined);
       return;
     }
 
@@ -87,6 +93,7 @@ export function useArtistDetails(
       setArtist(payload.artist);
       setTopTracks(payload.topTracks);
       setRelatedArtists(payload.relatedArtists);
+      setServiceMetadata(payload.serviceMetadata);
       setStatus('success');
       setError(null);
     };
@@ -102,6 +109,7 @@ export function useArtistDetails(
       setArtist(null);
       setTopTracks([]);
       setRelatedArtists([]);
+      setServiceMetadata(undefined);
     };
 
     const runFetch = (background: boolean) => {
@@ -145,5 +153,5 @@ export function useArtistDetails(
     };
   }, [artistId, provider, topTrackLimit, relatedLimit]);
 
-  return { status, error, artist, topTracks, relatedArtists };
+  return { status, error, artist, topTracks, relatedArtists, serviceMetadata };
 }

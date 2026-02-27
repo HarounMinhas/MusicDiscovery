@@ -28,7 +28,7 @@ export class HttpStatusError extends Error {
 
 export async function fetchJson<T>(url: string, options: FetchOptions = {}): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.HTTP_DEFAULT_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), env.HTTP_DEFAULT_TIMEOUT_MS) as unknown as number;
   const signal = options.signal
     ? anySignal([options.signal as AbortSignal, controller.signal])
     : controller.signal;

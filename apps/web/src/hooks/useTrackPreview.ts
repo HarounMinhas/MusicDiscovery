@@ -107,7 +107,8 @@ export function useTrackPreview(isEnabled: boolean, onPlaybackError?: (message: 
       if (!isEnabled) {
         return;
       }
-      const previewSource = track.previewProxyUrl ?? track.previewUrl;
+      // Use direct previewUrl instead of proxy to avoid 404 errors
+      const previewSource = track.previewUrl;
       if (!previewSource) {
         finalizeFailure(track, { reason: 'missing' });
         stopPlayback();
@@ -132,7 +133,7 @@ export function useTrackPreview(isEnabled: boolean, onPlaybackError?: (message: 
         if (allowRefresh) {
           try {
             const refreshed = mergeTrackMetadata(track, await getTrackMetadata(track.id, { forceRefresh: true }));
-            const refreshedSource = refreshed.previewProxyUrl ?? refreshed.previewUrl;
+            const refreshedSource = refreshed.previewUrl;
             if (refreshedSource) {
               await playPreparedTrack(refreshed, false, token);
               return;

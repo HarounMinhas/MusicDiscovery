@@ -70,7 +70,7 @@ export function pickBestDeezerArtist(query: string, candidates: DeezerArtist[]):
 }
 
 function computeArtistScore(query: string, artist: DeezerArtist): number {
-  const name = artist.name?.trim().toLowerCase() ?? '';
+  const name = artist.name?.trim().toLowerCase();
   if (!name) return 0;
   let score = 0;
   if (name === query) {
@@ -86,20 +86,31 @@ function computeArtistScore(query: string, artist: DeezerArtist): number {
 }
 
 function levenshteinDistance(a: string, b: string): number {
-  const matrix = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1));
-  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+  const matrix = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) {
+    const row = matrix[i];
+    if (row) row[0] = i;
+  }
+  for (let j = 0; j <= b.length; j++) {
+    const firstRow = matrix[0];
+    if (firstRow) firstRow[j] = j;
+  }
   for (let i = 1; i <= a.length; i++) {
     for (let j = 1; j <= b.length; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
+      const currentRow = matrix[i];
+      const prevRow = matrix[i - 1];
+      if (currentRow && prevRow) {
+        currentRow[j] = Math.min(
+          (prevRow[j] ?? 0) + 1,
+          (currentRow[j - 1] ?? 0) + 1,
+          (prevRow[j - 1] ?? 0) + cost
+        );
+      }
     }
   }
-  return matrix[a.length][b.length];
+  const lastRow = matrix[a.length];
+  return lastRow?.[b.length] ?? 0;
 }
 
 function mapError(error: unknown, details: Record<string, unknown>): never {

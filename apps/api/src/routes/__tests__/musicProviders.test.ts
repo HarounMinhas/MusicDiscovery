@@ -29,7 +29,8 @@ async function createApp() {
       });
       return;
     }
-    res.status(500).json({ error: { code: 'server_error', message: 'Unexpected error' } });
+    const errorMessage = err instanceof Error ? err.message : 'Unexpected error';
+    res.status(500).json({ error: { code: 'server_error', message: errorMessage } });
   });
   return app;
 }

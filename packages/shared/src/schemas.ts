@@ -5,7 +5,10 @@ export const ArtistSchema = z.object({
   name: z.string(),
   imageUrl: z.string().url().optional(),
   genres: z.array(z.string()).optional(),
-  popularity: z.number().optional()
+  popularity: z.number().optional(),
+  // Issue #85: UX label / explainability (additive)
+  uxLabel: z.string().min(1).optional(),
+  uxSource: z.string().min(1).optional()
 });
 
 export type Artist = z.infer<typeof ArtistSchema>;
@@ -46,7 +49,10 @@ export const DeezerSmartArtistSchema = z.object({
   picture_medium: z.string().url().optional(),
   picture_big: z.string().url().optional(),
   picture_xl: z.string().url().optional(),
-  nb_fan: z.number().optional()
+  nb_fan: z.number().optional(),
+  // Issue #85: UX label / explainability (additive)
+  uxLabel: z.string().min(1).optional(),
+  uxSource: z.string().min(1).optional()
 });
 
 export const SmartRelatedResponseSchema = z.object({

@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import NavigationInterceptor from './routing/NavigationInterceptor';
 
+import './styles.css';
+
 const root = document.getElementById('root');
 
 if (root) {

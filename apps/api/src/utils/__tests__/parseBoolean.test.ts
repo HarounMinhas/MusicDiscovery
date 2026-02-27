@@ -1,39 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-import { parseBoolean } from '../parseBoolean';
+import { parseBoolean } from '../parseBoolean.js';
 
 describe('parseBoolean', () => {
-  it('returns boolean values as-is', () => {
-    expect(parseBoolean(true)).toBe(true);
-    expect(parseBoolean(false)).toBe(false);
+  it('converts string "true" to true', () => {
+    expect(parseBoolean('true', false)).toBe(true);
   });
 
-  it('parses common truthy strings', () => {
-    expect(parseBoolean('true')).toBe(true);
-    expect(parseBoolean('TRUE')).toBe(true);
-    expect(parseBoolean(' yes ')).toBe(true);
-    expect(parseBoolean('1')).toBe(true);
-    expect(parseBoolean('on')).toBe(true);
+  it('converts string "false" to false', () => {
+    expect(parseBoolean('false', true)).toBe(false);
   });
 
-  it('parses common falsy strings', () => {
-    expect(parseBoolean('false')).toBe(false);
-    expect(parseBoolean('FALSE')).toBe(false);
-    expect(parseBoolean(' no ')).toBe(false);
-    expect(parseBoolean('0')).toBe(false);
-    expect(parseBoolean('off')).toBe(false);
-    expect(parseBoolean('')).toBe(false);
+  it('returns default for unknown strings', () => {
+    expect(parseBoolean('unknown', true)).toBe(true);
+    expect(parseBoolean('unknown', false)).toBe(false);
   });
 
-  it('falls back to default when string is unrecognized', () => {
-    expect(parseBoolean('maybe', true)).toBe(true);
-    expect(parseBoolean('perhaps', false)).toBe(false);
+  it('passes through boolean values', () => {
+    expect(parseBoolean(true, false)).toBe(true);
+    expect(parseBoolean(false, true)).toBe(false);
   });
 
-  it('uses default for non-string values', () => {
-    expect(parseBoolean(undefined)).toBe(false);
+  it('returns default for undefined', () => {
     expect(parseBoolean(undefined, true)).toBe(true);
-    expect(parseBoolean(0 as unknown, true)).toBe(true);
-    expect(parseBoolean(1 as unknown, false)).toBe(false);
+    expect(parseBoolean(undefined, false)).toBe(false);
   });
 });

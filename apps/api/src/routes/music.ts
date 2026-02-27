@@ -11,18 +11,22 @@ import {
   SearchArtistsResponseSchema,
   TopTracksResponseSchema,
   TrackSchema,
-  type Track
+  type Track,
+  type ServiceMetadata
 } from '@musicdiscovery/shared';
 import { getDefaultProviderMode, getProviderMetadata, resolveProvider } from '../providerRegistry.js';
 import type { Logger } from 'pino';
 import { logger } from '../logger.js';
+import { mapWithConcurrency } from '../utils/concurrency.js';
+import { getDeterministicFallbackSimilarArtists } from '../services/fallbackSimilarArtists/index.js';
+import { normalizeArtistName } from '../services/fallbackSimilarArtists/normalize.js';
 
 const router = Router();
 
 const MAX_PREVIEW_BYTES = 10 * 1024 * 1024;
 
 interface RequestWithLogger extends Request {
-  log?: Logger;
+  log: Logger;
 }
 
 function getRequestLogger(req: Request, bindings?: Record<string, unknown>) {
@@ -38,8 +42,8 @@ function parseLimit(value: unknown, fallback = 10, max = 25) {
   return fallback;
 }
 
-function attachPreviewProxy(track: Track | null): Track | null {
-  if (!track || !track.previewUrl) {
+function attachPreviewProxy(track: Track): Track {
+  if (!track.previewUrl) {
     return track;
   }
   return {
@@ -52,10 +56,15 @@ async function proxyTrackPreview(req: Request, res: Response, next: NextFunction
   try {
     const { mode, provider } = resolveProvider(req);
     const log = getRequestLogger(req, { route: 'preview', providerMode: mode, trackId: req.params.id });
+    const trackId = req.params.id;
+    if (!trackId) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'Track ID is required' } });
+      return;
+    }
     const track = await withCache(
-      `track:${mode}:${req.params.id}`,
+      `track:${mode}:${trackId}`,
       1000 * 60 * 5,
-      () => provider.getTrack(req.params.id)
+      () => provider.getTrack(trackId)
     );
     if (!track || !track.previewUrl) {
       log.warn('Preview not available for requested track');
@@ -166,7 +175,7 @@ async function proxyTrackPreview(req: Request, res: Response, next: NextFunction
     res.end();
   } catch (error) {
     const log = getRequestLogger(req, { route: 'preview', trackId: req.params.id });
-    log.error({ err: error }, 'Failed to proxy preview');
+    log.error({ err: error instanceof Error ? error : new Error(String(error)) }, 'Failed to proxy preview');
     if (!res.headersSent) {
       res.status(502).json({ error: { code: 'preview_proxy_failed', message: 'Failed to load preview audio' } });
     } else {
@@ -209,7 +218,7 @@ router.get('/music/artists/:id', async (req, res, next) => {
     const artist = await withCache(
       `artist:${mode}:${req.params.id}`,
       1000 * 60 * 60 * 24,
-      () => provider.getArtist(req.params.id)
+      () => provider.getArtist(req.params.id!)
     );
     if (!artist) {
       res.status(404).json({ error: { code: 'not_found', message: 'Artist not found' } });
@@ -225,12 +234,114 @@ router.get('/music/artists/:id/related', async (req, res, next) => {
   try {
     const limit = parseLimit(req.query.limit);
     const { mode, provider } = resolveProvider(req);
+
+    // Track service metadata for status labels
+    const serviceMetadata: ServiceMetadata = {
+      deezer: 'unused',
+      lastfm: 'unused',
+      musicbrainz: 'unused',
+      discogs: 'unused'
+    };
+
     const items = await withCache(
       `artist:${mode}:${req.params.id}:related:${limit}`,
       1000 * 60 * 60 * 24,
-      () => provider.getRelatedArtists(req.params.id, limit)
+      () => provider.getRelatedArtists(req.params.id!, limit)
     );
-    const parsed = RelatedArtistsResponseSchema.parse({ items });
+
+    if (items.length > 0) {
+      // Deezer primary API returned results
+      serviceMetadata.deezer = 'success';
+      const labeled = items.map((item) => ({ ...item, uxLabel: 'audio-similarity-based', uxSource: 'deezer' }));
+      const parsed = RelatedArtistsResponseSchema.parse({ 
+        items: labeled, 
+        serviceMetadata 
+      });
+      res.json(parsed);
+      return;
+    }
+
+    // Deezer returned nothing - mark as empty and try fallback
+    serviceMetadata.deezer = 'empty';
+
+    const log = getRequestLogger(req, { route: 'related', providerMode: mode, artistId: req.params.id });
+
+    const artist = await withCache(
+      `artist:${mode}:${req.params.id}`,
+      1000 * 60 * 60 * 24,
+      () => provider.getArtist(req.params.id!)
+    );
+
+    const queryName = String(artist?.name ?? '').trim();
+    if (!queryName) {
+      const parsed = RelatedArtistsResponseSchema.parse({ 
+        items: [], 
+        serviceMetadata 
+      });
+      res.json(parsed);
+      return;
+    }
+
+    const fallback = await getDeterministicFallbackSimilarArtists({ log, query: queryName, limit });
+    
+    // Update service metadata based on fallback results
+    if (fallback.items.length > 0) {
+      // Determine which services returned results based on uxLabel
+      const sources = new Set(fallback.items.map(item => item.source));
+      
+      if (sources.has('lastfm')) serviceMetadata.lastfm = 'success';
+      else if (env.LASTFM_API_KEY) serviceMetadata.lastfm = 'empty';
+      
+      if (sources.has('musicbrainz')) serviceMetadata.musicbrainz = 'success';
+      else serviceMetadata.musicbrainz = 'empty';
+      
+      if (sources.has('discogs')) serviceMetadata.discogs = 'success';
+      else if (env.DISCOGS_TOKEN) serviceMetadata.discogs = 'empty';
+    } else {
+      // All fallback services returned empty
+      if (env.LASTFM_API_KEY) serviceMetadata.lastfm = 'empty';
+      serviceMetadata.musicbrainz = 'empty';
+      if (env.DISCOGS_TOKEN) serviceMetadata.discogs = 'empty';
+    }
+
+    if (fallback.items.length === 0) {
+      const parsed = RelatedArtistsResponseSchema.parse({ 
+        items: [], 
+        serviceMetadata 
+      });
+      res.json(parsed);
+      return;
+    }
+
+    const resolved: { id: string; name: string; imageUrl?: string; genres?: string[]; popularity?: number; uxLabel?: string; uxSource?: string }[] = [];
+    const seenIds = new Set<string>();
+
+    await mapWithConcurrency(
+      fallback.items,
+      async (candidate) => {
+        try {
+          const searchResults = await provider.searchArtists(candidate.name, 5);
+          if (!searchResults.length) return;
+
+          const candidateKey = candidate.normalizedName;
+          const exact = searchResults.find((result) => normalizeArtistName(result.name) === candidateKey);
+          const best = exact ?? searchResults[0]!;
+
+          if (seenIds.has(best.id)) return;
+          seenIds.add(best.id);
+          resolved.push({ ...best, uxLabel: candidate.uxLabel, uxSource: candidate.source });
+        } catch (error) {
+          log.warn({ err: error, candidate: candidate.name }, 'Failed to resolve fallback artist name (swallowed)');
+        }
+      },
+      3
+    );
+
+    const finalItems = resolved.slice(0, limit);
+    const parsed = RelatedArtistsResponseSchema.parse({ 
+      items: finalItems, 
+      serviceMetadata 
+    });
     res.json(parsed);
   } catch (error) {
     next(error);
@@ -245,9 +356,9 @@ router.get('/music/artists/:id/top-tracks', async (req, res, next) => {
     const items = await withCache(
       `artist:${mode}:${req.params.id}:top:${market}:${limit}`,
       1000 * 60 * 5,
-      () => provider.getTopTracks(req.params.id, market, limit)
+      () => provider.getTopTracks(req.params.id!, market, limit)
     );
-    const decorated = items.map((track) => attachPreviewProxy(track) ?? track);
+    const decorated = items.map((track) => attachPreviewProxy(track));
     const parsed = TopTracksResponseSchema.parse({ items: decorated });
     res.json(parsed);
   } catch (error) {
@@ -261,13 +372,13 @@ router.get('/music/tracks/:id', async (req, res, next) => {
     const track = await withCache(
       `track:${mode}:${req.params.id}`,
       1000 * 60 * 5,
-      () => provider.getTrack(req.params.id)
+      () => provider.getTrack(req.params.id!)
     );
     if (!track) {
       res.status(404).json({ error: { code: 'not_found', message: 'Track not found' } });
       return;
     }
-    const decorated = attachPreviewProxy(track) ?? track;
+    const decorated = attachPreviewProxy(track);
     res.json(TrackSchema.parse(decorated));
   } catch (error) {
     next(error);

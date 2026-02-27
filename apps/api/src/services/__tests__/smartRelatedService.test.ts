@@ -147,7 +147,8 @@ describe('relatedByBandOrMembers', () => {
 
   expect(result.strategy).toBe('fallback-members-aggregation');
   expect(result.items.length).toBeGreaterThan(0);
-  expect(result.items[0].name).toMatch(/Related/);
+  const firstItem = result.items[0];
+  expect(firstItem?.name).toMatch(/Related/);
   expect(result.seeds).toEqual(['Damon Albarn', 'Graham Coxon']);
   });
 
@@ -190,7 +191,8 @@ describe('relatedByBandOrMembers', () => {
   const result = await relatedByBandOrMembers('Muse', 5, { allowFallback: true });
 
   expect(result.strategy).toBe('fallback-members-aggregation');
-  expect(result.items[0].name).toBe('Queen');
+  const firstItem = result.items[0];
+  expect(firstItem?.name).toBe('Queen');
   expect(result.items.map((item) => item.name)).toContain('Foo Fighters');
   expect(result.items.map((item) => item.name)).toContain('Coldplay');
   expect(result.seeds).toEqual(['Matt Bellamy', 'Dominic Howard']);
@@ -239,7 +241,8 @@ describe('relatedByBandOrMembers', () => {
   const result = await relatedByBandOrMembers('Slowdive', 5, { allowFallback: true });
 
   expect(result.items.length).toBe(1);
-  expect(result.items[0].name).toBe('Result');
+  const firstItem = result.items[0];
+  expect(firstItem?.name).toBe('Result');
   expect(result.seeds).toEqual(['Neil Halstead', 'Rachel Goswell']);
   });
 

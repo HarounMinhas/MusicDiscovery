@@ -3,18 +3,28 @@ import type { ProviderId } from '@musicdiscovery/shared';
 
 import AppRoutes from './AppRoutes';
 import BackgroundSurface from './components/BackgroundSurface';
-import type { BackgroundMode } from './components/BackgroundToggle';
+import BackgroundToggle, { type BackgroundMode } from './components/BackgroundToggle';
+import ServerStatusOverlay from './components/ServerStatusOverlay';
+import ThemeToggle, { type ThemeMode } from './components/ThemeToggle';
 import './styles.css';
 import { useArtistDetails } from './hooks/useArtistDetails';
 import { useArtistSearch } from './hooks/useArtistSearch';
 import { useProviderSelection } from './hooks/useProviderSelection';
+import { useServerStatus } from './hooks/useServerStatus';
 import { useTabState } from './hooks/useTabState';
 import { useToastQueue } from './hooks/useToastQueue';
 import { useScrollPreserver } from './hooks/useScrollPreserver';
+import { I18nProvider, useI18n, type Lang } from './i18n';
 
-export default function App(): JSX.Element {
+const INTRO_ACK_KEY = 'musicdiscovery-intro-acknowledged';
+const THEME_KEY = 'musicdiscovery-theme';
+
+function AppInner(): JSX.Element {
   const preserveScroll = useScrollPreserver();
   const { toasts, pushToast } = useToastQueue();
+  const { t, lang, setLang } = useI18n();
+  const serverStatus = useServerStatus();
+
   const {
     provider,
     providers,
@@ -52,8 +62,34 @@ export default function App(): JSX.Element {
     error: detailError,
     artist: detailArtist,
     topTracks,
-    relatedArtists
+    relatedArtists,
+    serviceMetadata
   } = useArtistDetails(activeTabId, provider);
+
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(THEME_KEY);
+      if (stored === 'light' || stored === 'dark') {
+        return stored;
+      }
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.documentElement.dataset.theme = theme;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(THEME_KEY, theme);
+    }
+
+    return () => {
+      delete document.documentElement.dataset.theme;
+    };
+  }, [theme]);
 
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     if (typeof window !== 'undefined') {
@@ -62,7 +98,7 @@ export default function App(): JSX.Element {
         return stored;
       }
     }
-    return 'static';
+    return 'animated';
   });
 
   useEffect(() => {
@@ -70,6 +106,48 @@ export default function App(): JSX.Element {
       window.localStorage.setItem('background-mode', backgroundMode);
     }
   }, [backgroundMode]);
+
+  const [isIntroOpen, setIsIntroOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return window.localStorage.getItem(INTRO_ACK_KEY) !== 'true';
+  });
+
+  const acknowledgeIntro = useCallback(() => {
+    setIsIntroOpen(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(INTRO_ACK_KEY, 'true');
+    }
+  }, []);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const openSettings = useCallback(() => {
+    setIsSettingsOpen(true);
+  }, []);
+
+  const closeSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      return;
+    }
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeSettings();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, [isSettingsOpen, closeSettings]);
 
   const handledConfirmedArtistRef = useRef<string | null>(null);
 
@@ -135,10 +213,9 @@ export default function App(): JSX.Element {
       providerStatus,
       providerError,
       onProviderChange: handleProviderChange,
-      backgroundMode,
-      onBackgroundModeChange: setBackgroundMode
+      onOpenSettings: openSettings
     }),
-    [provider, providers, providerStatus, providerError, handleProviderChange, backgroundMode]
+    [provider, providers, providerStatus, providerError, handleProviderChange, openSettings]
   );
 
   const searchProps = useMemo(
@@ -191,6 +268,7 @@ export default function App(): JSX.Element {
       selectedArtist,
       topTracks,
       relatedArtists,
+      serviceMetadata,
       onPreviewError: pushToast,
       onOpenRelated: openOrFocus
     }),
@@ -201,6 +279,7 @@ export default function App(): JSX.Element {
       selectedArtist,
       topTracks,
       relatedArtists,
+      serviceMetadata,
       pushToast,
       openOrFocus
     ]
@@ -208,7 +287,95 @@ export default function App(): JSX.Element {
 
   return (
     <BackgroundSurface mode={backgroundMode}>
+      {isIntroOpen ? (
+        <div
+          className="intro-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('intro.aria')}
+          onClick={acknowledgeIntro}
+        >
+          <div className="intro-overlay__backdrop" />
+          <div
+            className="intro-overlay__panel"
+            role="document"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <p className="label">{t('intro.title')}</p>
+            <p className="muted">{t('intro.line1')}</p>
+            <p className="muted">{t('intro.line2')}</p>
+            <div className="intro-overlay__actions">
+              <button type="button" className="intro-overlay__button" onClick={acknowledgeIntro}>
+                {t('intro.ok')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isSettingsOpen ? (
+        <div
+          className="settings-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('settings.aria')}
+          onClick={closeSettings}
+        >
+          <div className="settings-overlay__backdrop" />
+          <div
+            className="settings-overlay__panel"
+            role="document"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <p className="label">{t('settings.title')}</p>
+            <div className="settings-overlay__content">
+              <div className="background-toggle">
+                <span className="label background-toggle__label">{t('settings.language.label')}</span>
+                <label className="background-toggle__switch">
+                  <select
+                    className="background-toggle__switch-input"
+                    value={lang}
+                    onChange={(event) => {
+                      setLang(event.target.value as Lang);
+                    }}
+                    aria-label={t('settings.language.label')}
+                  >
+                    <option value="nl">{t('settings.language.nl')}</option>
+                    <option value="en">{t('settings.language.en')}</option>
+                  </select>
+                </label>
+              </div>
+
+              <ThemeToggle value={theme} onChange={setTheme} />
+              <BackgroundToggle value={backgroundMode} onChange={setBackgroundMode} />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {serverStatus.visible ? (
+        <ServerStatusOverlay
+          phase={serverStatus.phase}
+          progress={serverStatus.progress}
+          onRetry={serverStatus.retryNow}
+        />
+      ) : null}
+
       <AppRoutes header={headerProps} search={searchProps} tabs={tabsProps} detail={detailProps} toasts={toasts} />
+
+      {hasTabs ? null : null}
     </BackgroundSurface>
+  );
+}
+
+export default function App(): JSX.Element {
+  return (
+    <I18nProvider>
+      <AppInner />
+    </I18nProvider>
   );
 }

@@ -2,12 +2,13 @@ import express from 'express';
 import request from 'supertest';
 import { ReadableStream } from 'node:stream/web';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { clearCache } from '../../cache.js';
 
-let resolveProviderSpy: ReturnType<typeof vi.spyOn>;
-let getProviderMetadataSpy: ReturnType<typeof vi.spyOn>;
-let getDefaultProviderModeSpy: ReturnType<typeof vi.spyOn>;
+let resolveProviderSpy: Mock;
+let getProviderMetadataSpy: Mock;
+let getDefaultProviderModeSpy: Mock;
 
 async function createApp() {
   const [{ default: musicRoutes }] = await Promise.all([import('../../routes/music.js')]);
@@ -15,7 +16,8 @@ async function createApp() {
   app.use(express.json());
   app.use('/api', musicRoutes);
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    res.status(500).json({ error: { code: 'server_error', message: (err as Error).message } });
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: { code: 'server_error', message: errorMessage } });
   });
   return app;
 }
@@ -31,13 +33,13 @@ describe('preview proxy', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const providerRegistry = await import('../../providerRegistry.js');
-    resolveProviderSpy = vi.spyOn(providerRegistry, 'resolveProvider');
+    resolveProviderSpy = vi.spyOn(providerRegistry, 'resolveProvider') as Mock;
     getProviderMetadataSpy = vi
       .spyOn(providerRegistry, 'getProviderMetadata')
-      .mockReturnValue([]);
+      .mockReturnValue([]) as Mock;
     getDefaultProviderModeSpy = vi
       .spyOn(providerRegistry, 'getDefaultProviderMode')
-      .mockReturnValue('tokenless');
+      .mockReturnValue('tokenless') as Mock;
   });
 
   afterEach(() => {

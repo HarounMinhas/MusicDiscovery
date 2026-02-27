@@ -1,34 +1,31 @@
 export async function mapWithConcurrency<T, R>(
-  items: readonly T[],
-  worker: (item: T, index: number) => Promise<R>,
+  items: T[],
+  mapper: (item: T, index: number) => Promise<R>,
   concurrency: number
 ): Promise<R[]> {
-  if (concurrency <= 0) throw new Error('Concurrency must be positive');
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-  let active = 0;
+  const results: R[] = [];
+  const executing: Promise<void>[] = [];
 
-  return new Promise((resolve, reject) => {
-    const maybeStart = () => {
-      if (nextIndex >= items.length && active === 0) {
-        resolve(results);
-        return;
-      }
-      while (active < concurrency && nextIndex < items.length) {
-        const current = nextIndex++;
-        active++;
-        Promise.resolve(worker(items[current], current))
-          .then((value) => {
-            results[current] = value;
-            active--;
-            maybeStart();
-          })
-          .catch((error) => {
-            reject(error);
-          });
-      }
-    };
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item === undefined) continue;
 
-    maybeStart();
-  });
+    const promise = (async () => {
+      const result = await mapper(item, i);
+      results[i] = result;
+    })();
+
+    const wrapped = promise.then(() => {
+      executing.splice(executing.indexOf(wrapped), 1);
+    });
+
+    executing.push(wrapped);
+
+    if (executing.length >= concurrency) {
+      await Promise.race(executing);
+    }
+  }
+
+  await Promise.all(executing);
+  return results.filter((r): r is R => r !== undefined);
 }
