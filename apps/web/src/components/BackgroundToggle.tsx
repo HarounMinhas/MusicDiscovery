@@ -18,7 +18,7 @@ export default function BackgroundToggle({ value, onChange }: BackgroundTogglePr
       <span className="label background-toggle__label">{t('background.label')}</span>
       <label className="background-toggle__switch">
         <input
-          className="background-toggle__switch-input"
+          className="background-toggle__checkbox-input"
           type="checkbox"
           checked={enabled}
           onChange={(event) => {

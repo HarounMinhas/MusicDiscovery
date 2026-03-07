@@ -2,7 +2,7 @@ import React from 'react';
 
 import { useI18n } from '../i18n';
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'studio';
 
 type ThemeToggleProps = {
   value: ThemeMode;
@@ -11,24 +11,23 @@ type ThemeToggleProps = {
 
 export default function ThemeToggle({ value, onChange }: ThemeToggleProps) {
   const { t } = useI18n();
-  const isDark = value === 'dark';
 
   return (
     <div className="background-toggle">
       <span className="label background-toggle__label">{t('theme.label')}</span>
       <label className="background-toggle__switch">
-        <input
-          className="background-toggle__switch-input"
-          type="checkbox"
-          checked={isDark}
+        <select
+          className="settings-select"
+          value={value}
           onChange={(event) => {
-            onChange(event.target.checked ? 'dark' : 'light');
+            onChange(event.target.value as ThemeMode);
           }}
-        />
-        <span className="background-toggle__switch-track" aria-hidden="true">
-          <span className="background-toggle__switch-thumb" />
-        </span>
-        <span className="background-toggle__switch-text">{isDark ? t('theme.dark') : t('theme.light')}</span>
+          aria-label={t('theme.label')}
+        >
+          <option value="dark">{t('theme.dark')}</option>
+          <option value="light">{t('theme.light')}</option>
+          <option value="studio">{t('theme.studio')}</option>
+        </select>
       </label>
     </div>
   );
