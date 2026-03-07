@@ -69,7 +69,7 @@ function AppInner(): JSX.Element {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(THEME_KEY);
-      if (stored === 'light' || stored === 'dark') {
+      if (stored === 'light' || stored === 'dark' || stored === 'studio') {
         return stored;
       }
     }
@@ -337,7 +337,7 @@ function AppInner(): JSX.Element {
                 <span className="label background-toggle__label">{t('settings.language.label')}</span>
                 <label className="background-toggle__switch">
                   <select
-                    className="background-toggle__switch-input"
+                    className="settings-select"
                     value={lang}
                     onChange={(event) => {
                       setLang(event.target.value as Lang);
@@ -379,3 +379,4 @@ export default function App(): JSX.Element {
     </I18nProvider>
   );
 }
+
