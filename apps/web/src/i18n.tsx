@@ -47,6 +47,7 @@ const MESSAGES = {
     'theme.dark': 'Donker',
     'theme.light': 'Licht modern',
     'theme.studio': 'Studio mix',
+    'theme.studioWhite': 'Studio white',
 
     'background.label': 'Achtergrondanimatie',
     'background.on': 'Aan',
@@ -94,6 +95,7 @@ const MESSAGES = {
     'theme.dark': 'Dark',
     'theme.light': 'Light modern',
     'theme.studio': 'Studio mix',
+    'theme.studioWhite': 'Studio white',
 
     'background.label': 'Background animation',
     'background.on': 'On',

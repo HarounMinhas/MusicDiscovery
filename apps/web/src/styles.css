@@ -1318,6 +1318,35 @@ html[data-theme="light"] .provider-switcher__select {
   text-overflow: ellipsis;
 }
 
+html[data-theme="light"] .artist-tabsbar {
+  border-bottom-color: rgba(26, 31, 44, 0.14);
+}
+
+html[data-theme="light"] .artist-tabsbar::-webkit-scrollbar-thumb {
+  background: rgba(26, 31, 44, 0.24);
+}
+
+html[data-theme="light"] .artist-tab {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(26, 31, 44, 0.12);
+  color: #1a1f2c;
+}
+
+html[data-theme="light"] .artist-tab:not(.artist-tab--active):hover {
+  background: rgba(239, 243, 253, 0.96);
+}
+
+html[data-theme="light"] .artist-tab--active {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(26, 31, 44, 0.22);
+  box-shadow: 0 14px 26px rgba(58, 70, 96, 0.18);
+}
+
+html[data-theme="light"] .artist-tab__thumb--placeholder {
+  background: rgba(26, 31, 44, 0.08);
+  color: rgba(26, 31, 44, 0.72);
+}
+
 
 /* Service Status Labels (from aa9dcf...) */
 .service-status-labels {
@@ -1487,4 +1516,109 @@ html[data-theme="studio"] .muted,
 html[data-theme="studio"] .background-toggle__switch-text,
 html[data-theme="studio"] .background-toggle__label {
   color: rgba(232, 239, 251, 0.78);
+}
+
+
+html[data-theme="studio-white"] {
+  color-scheme: light;
+  background: radial-gradient(circle at 12% 12%, #fef6f8 0%, #eef2fb 52%, #e7f6f7 100%);
+  color: #1f2634;
+}
+
+html[data-theme="studio-white"] body::before {
+  background:
+    radial-gradient(circle at 84% 14%, rgba(67, 192, 194, 0.22), transparent 44%),
+    radial-gradient(circle at 14% 84%, rgba(245, 98, 120, 0.18), transparent 42%),
+    radial-gradient(circle at top left, #fef6f8, #e7f6f7 72%);
+}
+
+html[data-theme="studio-white"] .background-pulse__orb::before {
+  background: radial-gradient(
+    circle,
+    rgba(103, 212, 213, 0.3) 0%,
+    rgba(100, 154, 223, 0.2) 30%,
+    rgba(105, 66, 168, 0.1) 58%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.14;
+}
+
+html[data-theme="studio-white"] .intro-overlay__panel,
+html[data-theme="studio-white"] .settings-overlay__panel,
+html[data-theme="studio-white"] .server-status-overlay__panel,
+html[data-theme="studio-white"] .search-panel,
+html[data-theme="studio-white"] .details-panel,
+html[data-theme="studio-white"] .results-popover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 253, 0.92));
+  border-color: rgba(92, 174, 178, 0.28);
+  box-shadow: 0 18px 36px rgba(65, 81, 112, 0.2);
+}
+
+html[data-theme="studio-white"] .settings-button,
+html[data-theme="studio-white"] .background-toggle__switch,
+html[data-theme="studio-white"] .provider-switcher__select,
+html[data-theme="studio-white"] .settings-select {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(92, 174, 178, 0.34);
+  box-shadow: 0 8px 20px rgba(65, 81, 112, 0.16);
+}
+
+html[data-theme="studio-white"] .settings-button:hover,
+html[data-theme="studio-white"] .settings-button:focus-visible {
+  border-color: rgba(92, 174, 178, 0.62);
+  background: rgba(75, 203, 197, 0.18);
+  color: #1f2634;
+}
+
+html[data-theme="studio-white"] .background-toggle__switch-track {
+  background: rgba(26, 31, 44, 0.08);
+  border-color: rgba(92, 174, 178, 0.34);
+}
+
+html[data-theme="studio-white"] .background-toggle__checkbox-input:checked + .background-toggle__switch-track {
+  background: linear-gradient(135deg, rgba(246, 103, 124, 0.42), rgba(80, 205, 201, 0.42));
+  border-color: rgba(92, 174, 178, 0.7);
+}
+
+html[data-theme="studio-white"] .search-panel__input input,
+html[data-theme="studio-white"] .provider-switcher__select,
+html[data-theme="studio-white"] .settings-select {
+  border-color: rgba(92, 174, 178, 0.32);
+}
+
+html[data-theme="studio-white"] .search-panel__input input:focus,
+html[data-theme="studio-white"] .provider-switcher__select:focus,
+html[data-theme="studio-white"] .settings-select:focus-visible,
+html[data-theme="studio-white"] .background-toggle__checkbox-input:focus-visible + .background-toggle__switch-track {
+  border-color: rgba(92, 174, 178, 0.8);
+  box-shadow: 0 0 0 3px rgba(92, 174, 178, 0.22);
+}
+
+html[data-theme="studio-white"] .results-list li button,
+html[data-theme="studio-white"] .track-list__button,
+html[data-theme="studio-white"] .related-list__button,
+html[data-theme="studio-white"] .artist-tab {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(65, 81, 112, 0.14);
+}
+
+html[data-theme="studio-white"] .results-list li.active button,
+html[data-theme="studio-white"] .track-list__button:hover,
+html[data-theme="studio-white"] .track-list__button:focus-visible,
+html[data-theme="studio-white"] .track-list__button.is-playing,
+html[data-theme="studio-white"] .related-list__button:hover,
+html[data-theme="studio-white"] .related-list__button:focus-visible,
+html[data-theme="studio-white"] .artist-tab--active,
+html[data-theme="studio-white"] .artist-tab:not(.artist-tab--active):hover {
+  background: linear-gradient(145deg, rgba(75, 203, 197, 0.2), rgba(246, 103, 124, 0.2));
+  border-color: rgba(92, 174, 178, 0.5);
+  box-shadow: 0 10px 22px rgba(65, 81, 112, 0.2);
+}
+
+html[data-theme="studio-white"] .label,
+html[data-theme="studio-white"] .muted,
+html[data-theme="studio-white"] .background-toggle__switch-text,
+html[data-theme="studio-white"] .background-toggle__label {
+  color: rgba(31, 38, 52, 0.8);
 }
