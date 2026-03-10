@@ -69,11 +69,11 @@ function AppInner(): JSX.Element {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(THEME_KEY);
-      if (stored === 'light' || stored === 'dark' || stored === 'studio') {
+      if (stored === 'light' || stored === 'dark' || stored === 'studio' || stored === 'studio-white') {
         return stored;
       }
     }
-    return 'dark';
+    return 'studio';
   });
 
   useEffect(() => {
