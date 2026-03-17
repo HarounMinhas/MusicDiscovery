@@ -1,23 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { buildApiUrl } from '../config/api';
+
 type ServerStatus = 'checking' | 'starting' | 'ready';
 export type ServerPhase = 'connecting' | 'booting';
 
 const HEALTH_ENDPOINT = '/health';
 const VISIBILITY_DELAY_MS = 600;
-const WARMUP_ESTIMATE_MS = 45000;
+const WARMUP_ESTIMATE_MS = 60000;
 const REQUEST_TIMEOUT_MS = 4000;
-const BACKOFF_BASE_MS = 1200;
-const BACKOFF_MAX_MS = 8000;
-
-function getApiPrefix(): string {
-  const prefix = (import.meta.env.VITE_API_PREFIX ?? '/api').replace(/\/$/, '');
-  return prefix || '/api';
-}
+const HEALTH_CHECK_INTERVAL_MS = 5000;
 
 async function fetchHealth(signal: AbortSignal): Promise<void> {
-  const apiPrefix = getApiPrefix();
-  const res = await fetch(`${apiPrefix}${HEALTH_ENDPOINT}`, {
+  const res = await fetch(buildApiUrl(HEALTH_ENDPOINT), {
     signal,
     cache: 'no-store'
   });
@@ -62,13 +57,10 @@ export function useServerStatus(): {
     try {
       await fetchHealth(controller.signal);
       setStatus('ready');
-    } catch {
+    } catch (error) {
+      console.warn('Server health check failed', { attempt: nextAttempt, error });
       setStatus('starting');
-      const delay = Math.min(
-        BACKOFF_MAX_MS,
-        Math.round(BACKOFF_BASE_MS * Math.pow(1.6, Math.max(0, nextAttempt - 1)))
-      );
-      timerRef.current = window.setTimeout(runCheck, delay);
+      timerRef.current = window.setTimeout(runCheck, HEALTH_CHECK_INTERVAL_MS);
     } finally {
       window.clearTimeout(timeoutId);
     }

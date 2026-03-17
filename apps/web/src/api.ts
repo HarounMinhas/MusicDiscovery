@@ -7,9 +7,27 @@ import type {
 } from '@musicdiscovery/shared';
 
 import type { ArtistDetailsPayload } from './cache/artistCache';
+import { buildApiUrl } from './config/api';
 import { getSelectedProvider } from './providerSelection';
 
-const apiPrefix = (import.meta.env.VITE_API_PREFIX ?? '/api').replace(/\/$/, '');
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const COLD_START_RETRY_BUDGET_MS = 65_000;
+const COLD_START_RETRY_BASE_DELAY_MS = 1200;
+const COLD_START_RETRY_MAX_DELAY_MS = 10_000;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function getRetryDelayMs(attempt: number): number {
+  const exponentialDelay = Math.round(COLD_START_RETRY_BASE_DELAY_MS * Math.pow(1.8, Math.max(0, attempt - 1)));
+  return Math.min(COLD_START_RETRY_MAX_DELAY_MS, exponentialDelay);
+}
+
+function isRetryableStatus(status: number): boolean {
+  return RETRYABLE_STATUS_CODES.has(status);
+}
+
 
 async function request<T>(
   path: string,
@@ -23,14 +41,52 @@ async function request<T>(
   }
 
   const pathname = `${url.pathname}${url.search}`;
-  const res = await fetch(`${apiPrefix}${pathname}`);
+  const requestUrl = buildApiUrl(pathname);
 
-  if (!res.ok) {
+  const startedAt = Date.now();
+  for (let attempt = 1; ; attempt += 1) {
+    let res: Response;
+    try {
+      res = await fetch(requestUrl, { cache: 'no-store' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Network request failed';
+      const elapsedMs = Date.now() - startedAt;
+      if (elapsedMs < COLD_START_RETRY_BUDGET_MS) {
+        const delayMs = getRetryDelayMs(attempt);
+        console.warn('API request network failure, retrying', { requestUrl, attempt, message, elapsedMs, delayMs });
+        await wait(delayMs);
+        continue;
+      }
+      throw new Error(`${message} (exceeded retry budget ${COLD_START_RETRY_BUDGET_MS}ms)`);
+    }
+
+    if (res.ok) {
+      return res.json() as Promise<T>;
+    }
+
     const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    const message = text || `Request failed: ${res.status}`;
+
+    if (isRetryableStatus(res.status)) {
+      const elapsedMs = Date.now() - startedAt;
+      if (elapsedMs < COLD_START_RETRY_BUDGET_MS) {
+        const delayMs = getRetryDelayMs(attempt);
+        console.warn('API request returned retryable status, retrying', {
+          requestUrl,
+          attempt,
+          status: res.status,
+          elapsedMs,
+          delayMs
+        });
+        await wait(delayMs);
+        continue;
+      }
+    }
+
+    throw new Error(message);
   }
 
-  return res.json() as Promise<T>;
+  throw new Error(`Request failed after exceeding retry budget (${COLD_START_RETRY_BUDGET_MS}ms)`);
 }
 
 export async function getProviderCatalog(): Promise<{ default: ProviderId; items: ProviderMetadata[] }> {
