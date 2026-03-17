@@ -46,6 +46,8 @@ async function request<T>(
   const startedAt = Date.now();
   for (let attempt = 1; ; attempt += 1) {
     let res: Response;
+    const attemptStartedAt = Date.now();
+    console.info('API request started', { requestUrl, attempt });
     try {
       res = await fetch(requestUrl, { cache: 'no-store' });
     } catch (error) {
@@ -61,11 +63,20 @@ async function request<T>(
     }
 
     if (res.ok) {
+      const elapsedMs = Date.now() - attemptStartedAt;
+      console.info('API request succeeded', { requestUrl, attempt, status: res.status, elapsedMs });
       return res.json() as Promise<T>;
     }
 
     const text = await res.text();
     const message = text || `Request failed: ${res.status}`;
+
+    console.warn('API request failed', {
+      requestUrl,
+      attempt,
+      status: res.status,
+      message
+    });
 
     if (isRetryableStatus(res.status)) {
       const elapsedMs = Date.now() - startedAt;

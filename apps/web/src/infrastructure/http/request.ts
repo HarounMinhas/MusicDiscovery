@@ -37,6 +37,8 @@ export async function request<T>(
   const startedAt = Date.now();
   for (let attempt = 1; ; attempt += 1) {
     let response: Response;
+    const attemptStartedAt = Date.now();
+    console.info('API request started', { requestUrl, provider, attempt });
     try {
       response = await fetch(requestUrl, { cache: 'no-store' });
     } catch (error) {
@@ -52,11 +54,21 @@ export async function request<T>(
     }
 
     if (response.ok) {
+      const elapsedMs = Date.now() - attemptStartedAt;
+      console.info('API request succeeded', { requestUrl, provider, attempt, status: response.status, elapsedMs });
       return response.json() as Promise<T>;
     }
 
     const text = await response.text();
     const message = text || `Request failed: ${response.status}`;
+
+    console.warn('API request failed', {
+      requestUrl,
+      provider,
+      attempt,
+      status: response.status,
+      message
+    });
 
     if (isRetryableStatus(response.status)) {
       const elapsedMs = Date.now() - startedAt;

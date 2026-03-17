@@ -8,14 +8,36 @@ export type ServerPhase = 'connecting' | 'booting';
 const HEALTH_ENDPOINT = '/health';
 const VISIBILITY_DELAY_MS = 600;
 const WARMUP_ESTIMATE_MS = 60000;
-const REQUEST_TIMEOUT_MS = 4000;
+const REQUEST_TIMEOUT_MS = 15000;
 const HEALTH_CHECK_INTERVAL_MS = 5000;
+const HEALTH_CHECK_RETRY_BUDGET_MS = 120000;
 
 async function fetchHealth(signal: AbortSignal): Promise<void> {
-  const res = await fetch(buildApiUrl(HEALTH_ENDPOINT), {
+  const healthUrl = buildApiUrl(HEALTH_ENDPOINT);
+  const startedAt = Date.now();
+  console.info('Health check started', { healthUrl });
+
+  const res = await fetch(healthUrl, {
     signal,
     cache: 'no-store'
   });
+
+  const elapsedMs = Date.now() - startedAt;
+  let responsePayload: unknown = null;
+  try {
+    responsePayload = await res.clone().json();
+  } catch {
+    responsePayload = await res.clone().text().catch(() => null);
+  }
+
+  console.info('Health check response received', {
+    healthUrl,
+    status: res.status,
+    ok: res.ok,
+    elapsedMs,
+    responsePayload
+  });
+
   if (!res.ok) {
     throw new Error(`health-check:${res.status}`);
   }
@@ -36,6 +58,7 @@ export function useServerStatus(): {
   const [status, setStatus] = useState<ServerStatus>('checking');
   const [attempt, setAttempt] = useState(0);
   const startRef = useRef(Date.now());
+  const firstCheckStartedAtRef = useRef(Date.now());
   const attemptRef = useRef(0);
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -56,11 +79,25 @@ export function useServerStatus(): {
     const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       await fetchHealth(controller.signal);
+      console.info('Health check marked server as ready', { attempt: nextAttempt });
       setStatus('ready');
     } catch (error) {
-      console.warn('Server health check failed', { attempt: nextAttempt, error });
+      const elapsedSinceFirstAttempt = Date.now() - firstCheckStartedAtRef.current;
+      console.warn('Server health check failed', {
+        attempt: nextAttempt,
+        elapsedSinceFirstAttempt,
+        retryBudgetMs: HEALTH_CHECK_RETRY_BUDGET_MS,
+        error
+      });
       setStatus('starting');
-      timerRef.current = window.setTimeout(runCheck, HEALTH_CHECK_INTERVAL_MS);
+      if (elapsedSinceFirstAttempt < HEALTH_CHECK_RETRY_BUDGET_MS) {
+        timerRef.current = window.setTimeout(runCheck, HEALTH_CHECK_INTERVAL_MS);
+      } else {
+        console.error('Health check retry budget exceeded; keeping app interactive with manual retry option', {
+          attempt: nextAttempt,
+          elapsedSinceFirstAttempt
+        });
+      }
     } finally {
       window.clearTimeout(timeoutId);
     }
@@ -90,6 +127,7 @@ export function useServerStatus(): {
     }
     abortRef.current?.abort();
     startRef.current = Date.now();
+    firstCheckStartedAtRef.current = Date.now();
     attemptRef.current = 0;
     setAttempt(0);
     setStatus('checking');
