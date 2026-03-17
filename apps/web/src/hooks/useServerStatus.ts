@@ -63,6 +63,7 @@ export function useServerStatus(): {
   const timerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [now, setNow] = useState(Date.now());
+  const retryBudgetExceededLoggedRef = useRef(false);
 
   const runCheck = useCallback(async () => {
     attemptRef.current += 1;
@@ -90,14 +91,18 @@ export function useServerStatus(): {
         error
       });
       setStatus('starting');
-      if (elapsedSinceFirstAttempt < HEALTH_CHECK_RETRY_BUDGET_MS) {
-        timerRef.current = window.setTimeout(runCheck, HEALTH_CHECK_INTERVAL_MS);
-      } else {
-        console.error('Health check retry budget exceeded; keeping app interactive with manual retry option', {
+      if (
+        elapsedSinceFirstAttempt >= HEALTH_CHECK_RETRY_BUDGET_MS &&
+        !retryBudgetExceededLoggedRef.current
+      ) {
+        retryBudgetExceededLoggedRef.current = true;
+        console.error('Health check retry budget exceeded; continuing automatic polling', {
           attempt: nextAttempt,
-          elapsedSinceFirstAttempt
+          elapsedSinceFirstAttempt,
+          retryIntervalMs: HEALTH_CHECK_INTERVAL_MS
         });
       }
+      timerRef.current = window.setTimeout(runCheck, HEALTH_CHECK_INTERVAL_MS);
     } finally {
       window.clearTimeout(timeoutId);
     }
@@ -129,6 +134,7 @@ export function useServerStatus(): {
     startRef.current = Date.now();
     firstCheckStartedAtRef.current = Date.now();
     attemptRef.current = 0;
+    retryBudgetExceededLoggedRef.current = false;
     setAttempt(0);
     setStatus('checking');
     runCheck();
