@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ServiceMetadata, ServiceStatus } from '@musicdiscovery/shared';
+import { useI18n } from '../i18n';
 
 interface ServiceStatusLabelsProps {
   metadata?: ServiceMetadata;
@@ -7,52 +8,69 @@ interface ServiceStatusLabelsProps {
 
 interface ServiceInfo {
   label: string;
-  tooltip: string;
+  tooltipKey:
+    | 'services.deezer.tooltip'
+    | 'services.lastfm.tooltip'
+    | 'services.musicbrainz.tooltip'
+    | 'services.discogs.tooltip';
 }
 
 const SERVICE_INFO: Record<string, ServiceInfo> = {
   deezer: {
     label: 'Deezer',
-    tooltip: 'Primaire muziekservice voor audio-gelijkenis'
+    tooltipKey: 'services.deezer.tooltip'
   },
   lastfm: {
     label: 'Last.fm',
-    tooltip: 'Muziekdatabase met gebruikersluisterdata'
+    tooltipKey: 'services.lastfm.tooltip'
   },
   musicbrainz: {
     label: 'MusicBrainz',
-    tooltip: 'Open muziekencyclopedie met artiestrelatiedata'
+    tooltipKey: 'services.musicbrainz.tooltip'
   },
   discogs: {
     label: 'Discogs',
-    tooltip: 'Muziekdatabase met catalogus- en samenwerkingsdata'
+    tooltipKey: 'services.discogs.tooltip'
   }
 };
 
-const STATUS_CONFIG: Record<ServiceStatus, { color: string; tooltip: string }> = {
+const STATUS_CONFIG: Record<
+  ServiceStatus,
+  {
+    color: string;
+    tooltipKey:
+      | 'services.status.success'
+      | 'services.status.empty'
+      | 'services.status.error'
+      | 'services.status.unused'
+      | 'services.status.rate-limited';
+  }
+> = {
   success: {
     color: '#22c55e',
-    tooltip: 'Resultaten gevonden'
+    tooltipKey: 'services.status.success'
   },
   empty: {
     color: '#ef4444',
-    tooltip: 'Geen resultaten gevonden'
+    tooltipKey: 'services.status.empty'
   },
   error: {
     color: '#ef4444',
-    tooltip: 'Fout opgetreden bij ophalen'
+    tooltipKey: 'services.status.error'
   },
   unused: {
     color: '#d1d5db',
-    tooltip: 'Niet gebruikt (primaire service had al resultaten)'
+    tooltipKey: 'services.status.unused'
   },
   'rate-limited': {
     color: '#f59e0b',
-    tooltip: 'Rate-limit bereikt, tijdelijk overgeslagen'
+    tooltipKey: 'services.status.rate-limited'
   }
 };
 
 export default function ServiceStatusLabels({ metadata }: ServiceStatusLabelsProps) {
+  const { t } = useI18n();
+
   if (!metadata) {
     return null;
   }
@@ -65,14 +83,14 @@ export default function ServiceStatusLabels({ metadata }: ServiceStatusLabelsPro
   ];
 
   return (
-    <div className="service-status-labels" aria-label="Status van muziekservices">
+    <div className="service-status-labels" aria-label={t('services.aria')}>
       {services.map(({ key, status }) => {
         const info = SERVICE_INFO[key];
         const config = STATUS_CONFIG[status];
         
         if (!info || !config) return null;
 
-        const tooltipText = `${info.label}: ${config.tooltip}. ${info.tooltip}.`;
+        const tooltipText = `${info.label}: ${t(config.tooltipKey)}. ${t(info.tooltipKey)}.`;
 
         return (
           <span
