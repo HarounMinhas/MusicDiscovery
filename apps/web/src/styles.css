@@ -997,6 +997,23 @@ html[data-theme="light"] .details-panel {
   background: rgba(119, 153, 255, 0.35);
 }
 
+html[data-theme="light"] .track-list__button:hover,
+html[data-theme="light"] .track-list__button:focus-visible,
+html[data-theme="light"] .track-list__button.is-playing {
+  background: rgba(119, 153, 255, 0.16);
+  border-color: rgba(97, 131, 237, 0.45);
+  box-shadow: 0 10px 24px rgba(73, 104, 196, 0.22);
+}
+
+html[data-theme="light"] .track-list__indicator {
+  background: rgba(119, 153, 255, 0.2);
+  color: rgba(26, 31, 44, 0.82);
+}
+
+html[data-theme="light"] .track-list__button.is-playing .track-list__indicator {
+  background: rgba(119, 153, 255, 0.28);
+}
+
 .track-list__icon {
   position: absolute;
   inset: 0;
@@ -1043,6 +1060,14 @@ html[data-theme="light"] .details-panel {
     radial-gradient(circle at 80% 30%, rgba(255, 182, 219, 0.12), transparent 60%),
     rgba(32, 27, 55, 0.25);
   mix-blend-mode: screen;
+}
+
+html[data-theme="light"] .track-list__visualizer-overlay,
+html[data-theme="studio-white"] .track-list__visualizer-overlay {
+  background: radial-gradient(circle at 20% 20%, rgba(119, 153, 255, 0.18), transparent 58%),
+    radial-gradient(circle at 80% 30%, rgba(246, 103, 124, 0.16), transparent 62%),
+    rgba(255, 255, 255, 0.3);
+  mix-blend-mode: multiply;
 }
 
 .track-list__visualizer-canvas {
