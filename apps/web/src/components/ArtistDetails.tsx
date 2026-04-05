@@ -5,6 +5,7 @@ import FrequencyVisualizer from './FrequencyVisualizer';
 import SimilarArtistsList from './SimilarArtistsList';
 import ServiceStatusLabels from './ServiceStatusLabels';
 import { useTrackPreview } from '../hooks/useTrackPreview';
+import { useI18n } from '../i18n';
 
 interface ArtistDetailsProps {
   artist: Artist;
@@ -30,6 +31,7 @@ export default function ArtistDetails({
   onOpenRelated
 }: ArtistDetailsProps) {
   const previewEnabled = provider === 'tokenless';
+  const { t } = useI18n();
   const {
     activeTrackId,
     audioRef: previewAudioRef,
@@ -77,7 +79,7 @@ export default function ArtistDetails({
           </div>
         )}
         <div>
-          <p className="label">Geselecteerde artiest</p>
+          <p className="label">{t('details.selectedArtist')}</p>
           <div className="artist-header-title">
             <h2>{artist.name}</h2>
             <ServiceStatusLabels metadata={serviceMetadata} />
@@ -86,7 +88,7 @@ export default function ArtistDetails({
         </div>
       </header>
 
-      {status === 'loading' && <LoadingIndicator label="Artiestdetails laden…" />}
+      {status === 'loading' && <LoadingIndicator label={t('details.loading')} />}
       {status === 'error' && error ? (
         <p className="sr-only" role="status">
           {error}
@@ -96,9 +98,9 @@ export default function ArtistDetails({
       {status !== 'loading' && status !== 'error' ? (
         <div className="details-grid">
           <section>
-            <h3>Topnummers</h3>
+            <h3>{t('details.topTracks')}</h3>
             {displayTopTracks.length === 0 ? (
-              <p className="muted">Geen topnummers gevonden.</p>
+              <p className="muted">{t('details.topTracksEmpty')}</p>
             ) : previewEnabled ? (
               <>
                 <ol className="track-list track-list--interactive">
@@ -121,8 +123,8 @@ export default function ArtistDetails({
                           aria-pressed={isActive}
                           aria-label={
                             isActive
-                              ? `Stop preview van ${track.name}`
-                              : `Speel preview van ${track.name}`
+                              ? t('details.preview.stop', { track: track.name })
+                              : t('details.preview.play', { track: track.name })
                           }
                         >
                           <span
@@ -141,7 +143,7 @@ export default function ArtistDetails({
                           </span>
                           <div className="track-list__meta">
                             <strong>{track.name}</strong>
-                            <span className="muted">{formatArtists(track)}</span>
+                            <span className="muted">{formatArtists(track, t)}</span>
                           </div>
                           <div className="track-list__actions">
                             <span className="muted track-list__duration">
@@ -170,19 +172,19 @@ export default function ArtistDetails({
                       <dl className="track-list__error-meta">
                         {activePreviewFailure.details.status ? (
                           <>
-                            <dt>Status</dt>
+                            <dt>{t('details.error.status')}</dt>
                             <dd>{activePreviewFailure.details.status}</dd>
                           </>
                         ) : null}
                         {activePreviewFailure.details.deezerReference ? (
                           <>
-                            <dt>Referentie</dt>
+                            <dt>{t('details.error.reference')}</dt>
                             <dd>{activePreviewFailure.details.deezerReference}</dd>
                           </>
                         ) : null}
                         {activePreviewFailure.details.deezerIp ? (
                           <>
-                            <dt>Deezer IP</dt>
+                            <dt>{t('details.error.deezerIp')}</dt>
                             <dd>{activePreviewFailure.details.deezerIp}</dd>
                           </>
                         ) : null}
@@ -197,7 +199,7 @@ export default function ArtistDetails({
                   <li key={track.id}>
                     <div>
                       <strong>{track.name}</strong>
-                      <span className="muted">{formatArtists(track)}</span>
+                      <span className="muted">{formatArtists(track, t)}</span>
                     </div>
                     <span className="muted">{formatDuration(track.durationMs)}</span>
                   </li>
@@ -206,11 +208,10 @@ export default function ArtistDetails({
             )}
           </section>
           <section>
-            <h3>Gerelateerde artiesten</h3>
+            <h3>{t('details.relatedArtists')}</h3>
             {displayRelated.length === 0 ? (
               <p className="muted">
-                Geen gerelateerde artiesten gevonden. Dit komt zelden voor maar is belangrijk. Stuur de
-                naam van de artiest waar u naar zocht naar{' '}
+                {t('details.relatedEmpty')}{' '}
                 <a href="mailto:myemail@gmail.com">myemail@gmail.com</a>.
               </p>
             ) : (
@@ -230,9 +231,9 @@ function formatDuration(durationMs: number) {
   return `${minutes}:${seconds}`;
 }
 
-function formatArtists(track: Track) {
+function formatArtists(track: Track, t: ReturnType<typeof useI18n>['t']) {
   if (!track.artists?.length) {
-    return 'Onbekende artiest';
+    return t('details.unknownArtist');
   }
   return track.artists.map((item) => item.name).join(', ');
 }

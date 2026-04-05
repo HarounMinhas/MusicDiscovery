@@ -1564,11 +1564,15 @@ html[data-theme="studio-white"] .settings-select {
   box-shadow: 0 8px 20px rgba(65, 81, 112, 0.16);
 }
 
+html[data-theme="studio-white"] .settings-button {
+  color: rgba(31, 38, 52, 0.82);
+}
+
 html[data-theme="studio-white"] .settings-button:hover,
 html[data-theme="studio-white"] .settings-button:focus-visible {
   border-color: rgba(92, 174, 178, 0.62);
   background: rgba(75, 203, 197, 0.18);
-  color: #1f2634;
+  color: rgba(31, 38, 52, 0.96);
 }
 
 html[data-theme="studio-white"] .background-toggle__switch-track {
@@ -1584,7 +1588,13 @@ html[data-theme="studio-white"] .background-toggle__checkbox-input:checked + .ba
 html[data-theme="studio-white"] .search-panel__input input,
 html[data-theme="studio-white"] .provider-switcher__select,
 html[data-theme="studio-white"] .settings-select {
+  background: rgba(255, 255, 255, 0.94);
+  color: rgba(31, 38, 52, 0.92);
   border-color: rgba(92, 174, 178, 0.32);
+}
+
+html[data-theme="studio-white"] .search-panel__input input::placeholder {
+  color: rgba(31, 38, 52, 0.5);
 }
 
 html[data-theme="studio-white"] .search-panel__input input:focus,
